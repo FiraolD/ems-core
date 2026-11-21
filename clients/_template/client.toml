@@ -1,0 +1,30 @@
+# Starting point for a new client. Copy this folder into the client's own private repo
+# (for example ems-client-acme) and edit. Core never contains a client's name.
+
+[client]
+slug = "template"                  # lowercase letters, digits, '-' or '_'
+display_name = "Template Client"
+
+[company]
+legal_name = "Example Company PLC"
+tin = ""
+address = ""
+
+[modules]
+# Only enable what the client bought. Available now: hr.
+# Coming: attendance, leave, overtime, payroll.
+enabled = ["hr"]
+
+[country]
+pack = "et"                        # statutory rules: Ethiopia
+
+[rules]
+# Override pay rules here instead of editing code. Rates are quoted text, never numbers.
+# absence_divisor = 30
+# pension_employee_rate = "0.07"
+# pension_employer_rate = "0.11"
+# transport_taxable = false
+
+[extension]
+# Python package next to this file that adds client-specific behaviour.
+package = "extension_pkg"
