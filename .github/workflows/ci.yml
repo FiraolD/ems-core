@@ -39,6 +39,8 @@ jobs:
         run: ruff check .
       - name: Tests (in-memory SQLite)
         run: pytest
+      - name: Tests (PostgreSQL, includes the audit-log trigger)
+        run: pytest --ds=config.settings.dev
       - name: Django checks and migrations on PostgreSQL
         run: |
           python manage.py check
