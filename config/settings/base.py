@@ -4,7 +4,7 @@ from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
-from config.env import env, env_int, env_list
+from config.env import env, env_bool, env_int, env_list
 from core.extensions.client import ClientConfigError, load_client_config
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -46,6 +46,11 @@ ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
 INSTALLED_APPS = [
+    # Core apps come first so their templates (sign-in pages, base layout) take precedence
+    # over Django's built-in ones.
+    "core.accounts",
+    "core.audit",
+    "core.company",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -62,6 +67,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.audit.middleware.AuditContextMiddleware",
+    "core.accounts.middleware.ForcePasswordChangeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -82,6 +89,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.company.context_processors.company",
             ],
         },
     },
@@ -103,6 +111,21 @@ DATABASES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Authentication -----------------------------------------------------------------
+AUTH_USER_MODEL = "accounts.User"
+AUTHENTICATION_BACKENDS = ["core.accounts.backends.LockoutBackend"]
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "accounts:login"
+
+# Failed sign-ins before an account locks (0 turns lockout off) and how long it stays locked.
+EMS_LOCKOUT_MAX_ATTEMPTS = env_int("EMS_LOCKOUT_MAX_ATTEMPTS", 5)
+EMS_LOCKOUT_MINUTES = env_int("EMS_LOCKOUT_MINUTES", 15)
+# Force a password change after this many days. 0 turns expiry off.
+EMS_PASSWORD_MAX_AGE_DAYS = env_int("EMS_PASSWORD_MAX_AGE_DAYS", 0)
+# Trust the X-Forwarded-For header for audit-log addresses. Only when a proxy you control
+# sits in front of the app, because otherwise callers could write a false address.
+EMS_BEHIND_PROXY = env_bool("EMS_BEHIND_PROXY", False)
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {

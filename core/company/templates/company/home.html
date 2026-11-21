@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h1>Welcome, {{ user.get_full_name|default:user.get_username }}</h1>
+  <p class="muted">{{ company.legal_name }}</p>
+  <h2>Enabled modules</h2>
+  <ul>{% for name in modules %}<li>{{ name }}</li>{% endfor %}</ul>
+  {% if user.is_staff %}<p><a href="{% url 'admin:index' %}">Administration</a></p>{% endif %}
+</div>
+{% endblock %}
