@@ -42,6 +42,11 @@ class Company(models.Model):
 
     def save(self, *args, **kwargs):
         self.id = 1
+        # A fresh Company(...) always carries pk 1, so Django would try to INSERT it. If the
+        # row already exists, this is an update of that row.
+        if self._state.adding and not kwargs.get("force_insert"):
+            if type(self).objects.filter(pk=1).exists():
+                self._state.adding = False
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
