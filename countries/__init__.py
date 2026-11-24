@@ -1,7 +1,8 @@
 """Statutory packs, one per country. A client's ``[country] pack`` picks which one is used.
 
 A pack is a package ``countries.<code>`` exposing ``CODE``, ``NAME``, ``CURRENCY``,
-``default_brackets``, ``resolve_rules``, ``rules_snapshot`` and ``compute_payslip``.
+``Bracket``, ``default_brackets``, ``validate_brackets``, ``resolve_rules``,
+``rules_snapshot`` and ``compute_payslip``.
 """
 from __future__ import annotations
 

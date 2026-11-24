@@ -16,7 +16,7 @@ from decimal import Decimal
 from core.money import money
 
 from .absence import AbsenceResult, DayRecord, compute_absence
-from .pension import PensionResult, calculate_pension, pension_base
+from .pension import PensionResult, calculate_pension, pension_base, service_days
 from .rules import PayRules
 from .tax import Bracket, TaxResult, calculate_bonus_tax, calculate_paye
 
@@ -38,7 +38,9 @@ class PayslipInput:
 
 @dataclass(frozen=True)
 class Payslip:
-    basic_salary: Decimal
+    basic_salary: Decimal  # the agreed monthly basic
+    basic_earned: Decimal  # basic for this month: prorated by days worked for a new hire
+    hire_days: int | None  # days worked in the month, set only for someone hired during it
     transport_payable: Decimal  # transport after the leave and absence deduction
     other_allowances: Decimal
     overtime_pay: Decimal
@@ -71,15 +73,23 @@ def compute_payslip(
 
     absence = compute_absence(data.attendance, basic, transport, rules.absence_divisor)
 
+    # Someone hired during the month is paid only for the days from their hire date, on the
+    # same 30-day company month used for absence and pension.
+    hire_days = None
+    basic_earned = basic
+    if data.hire_date and data.period_start < data.hire_date <= data.period_end:
+        hire_days = service_days(data.hire_date, data.period_start, data.period_end)
+        basic_earned = min(money(basic * hire_days / rules.absence_divisor), basic)
+
     # Transport paid is what is left after leave and absence days are taken off.
     transport_payable = max(money(transport - absence.transport_deduction), money(0))
-    gross = money(basic + transport_payable + other + overtime + bonus)
+    gross = money(basic_earned + transport_payable + other + overtime + bonus)
 
-    # Taxable income: basic after unpaid absence, plus each other part only where the rules
-    # say it is taxable.
+    # Taxable income: basic earned after unpaid absence, plus each other part only where the
+    # rules say it is taxable.
     taxable_base = max(
         money(
-            basic
+            basic_earned
             - absence.basic_deduction
             + (overtime if rules.ot_taxable else 0)
             + (transport_payable if rules.transport_taxable else 0)
@@ -119,6 +129,8 @@ def compute_payslip(
 
     return Payslip(
         basic_salary=basic,
+        basic_earned=basic_earned,
+        hire_days=hire_days,
         transport_payable=transport_payable,
         other_allowances=other,
         overtime_pay=overtime,
