@@ -19,7 +19,9 @@ enabled = ["hr"]
 pack = "et"                        # statutory rules: Ethiopia
 
 [rules]
-# Override pay rules here instead of editing code. Rates are quoted text, never numbers.
+# Starting values for this installation. Administrators can also change any of these inside
+# the system with a start date (Admin > Pay rules); a value set there takes precedence from
+# its start date. Rates are quoted text, never numbers.
 # absence_divisor = 30
 # pension_employee_rate = "0.07"
 # pension_employer_rate = "0.11"

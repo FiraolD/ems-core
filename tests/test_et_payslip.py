@@ -111,13 +111,55 @@ def test_overtime_is_taxable_by_default_and_switchable():
     assert on.gross_earnings == off.gross_earnings == d("6000.00")
 
 
-def test_new_hire_pension_rule_flows_through():
+def test_new_hire_basic_and_pension_are_prorated():
     p = slip(basic_salary=d("3000"), hire_date=date(2026, 9, 21))
+    assert (p.hire_days, p.basic_earned) == (10, d("1000.00"))  # 3000 x 10 / 30
     assert (p.pension_service_days, p.pension_prorated) == (10, True)
     assert p.pensionable_salary == d("1000.00")
     assert p.pension.employee_contribution == d("70.00")
-    short = slip(basic_salary=d("3000"), hire_date=date(2026, 9, 22))
-    assert short.pension.employee_contribution == d("0.00")
+    assert p.gross_earnings == d("1000.00")
+    assert p.tax.paye == d("0.00")  # 1000 is below the 2000 threshold
+    assert p.net_salary == d("930.00")  # 1000 - 70
+
+
+def test_new_hire_under_ten_days_is_paid_but_has_no_pension():
+    p = slip(basic_salary=d("3000"), hire_date=date(2026, 9, 22))
+    assert (p.hire_days, p.basic_earned) == (9, d("900.00"))
+    assert p.pension.employee_contribution == d("0.00")
+    assert p.gross_earnings == p.net_salary == d("900.00")
+
+
+def test_hired_on_the_first_or_before_is_a_full_month():
+    for hired in (date(2026, 9, 1), date(2025, 3, 3)):
+        p = slip(basic_salary=d("3000"), hire_date=hired)
+        assert p.hire_days is None and p.basic_earned == d("3000.00")
+
+
+def test_hired_after_the_period_is_not_prorated_here():
+    # Not on this month's payroll at all; deciding that is the payroll run's job.
+    p = slip(basic_salary=d("3000"), hire_date=date(2026, 10, 5))
+    assert p.hire_days is None and p.basic_earned == d("3000.00")
+
+
+def test_new_hire_with_an_absence():
+    p = slip(
+        basic_salary=d("9000"),
+        hire_date=date(2026, 9, 16),
+        attendance=[DayRecord(date(2026, 9, 20), "absent")],
+    )
+    # 15 days -> 4500 earned; absence 9000/30 = 300; taxable 4200 -> 4200 x 20% - 500 = 340
+    # pension on the prorated 4500 = 315; net = 4500 - 340 - 315 - 300
+    assert p.basic_earned == d("4500.00")
+    assert p.taxable_income == d("4200.00")
+    assert p.tax.paye == d("340.00")
+    assert p.pension.employee_contribution == d("315.00")
+    assert p.net_salary == d("3545.00")
+
+
+def test_proration_never_pays_more_than_the_full_basic():
+    odd = PayRules(absence_divisor=20)
+    p = slip(odd, basic_salary=d("3000"), hire_date=date(2026, 9, 2))  # 29 days / 20
+    assert p.basic_earned == d("3000.00")
 
 
 def test_salary_advance_is_deducted_from_net_only():

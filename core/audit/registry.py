@@ -5,8 +5,11 @@ with the fields that changed. Bulk operations such as ``QuerySet.update()`` skip
 signals; where one matters, call ``core.audit.service.record`` yourself.
 """
 from collections.abc import Iterable
+from decimal import Decimal, InvalidOperation
 from typing import NamedTuple
 
+from django.core.exceptions import ValidationError
+from django.db import models
 from django.db.models.signals import post_delete, post_save, pre_save
 
 from .changes import diff_values
@@ -31,9 +34,21 @@ def register(model, *, exclude: Iterable[str] = (), redact: Iterable[str] = ()) 
     post_delete.connect(_post_delete, sender=model, dispatch_uid=f"audit-post-delete-{label}")
 
 
+def _as_stored(field, value):
+    """Money as the database will hold it (12000 -> 12000.00), so a log line reads the same
+    whether the value came from the database or from an unsaved object."""
+    if isinstance(field, models.DecimalField) and value is not None:
+        try:
+            exponent = Decimal(1).scaleb(-field.decimal_places)
+            return field.to_python(value).quantize(exponent)
+        except (InvalidOperation, ValidationError, TypeError, AttributeError):
+            return value
+    return value
+
+
 def _values(instance, only=None) -> dict:
     return {
-        field.attname: getattr(instance, field.attname)
+        field.attname: _as_stored(field, getattr(instance, field.attname))
         for field in instance._meta.concrete_fields
         if only is None or field.attname in only
     }
