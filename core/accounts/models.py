@@ -30,3 +30,13 @@ class User(AbstractUser):
     def set_password(self, raw_password):
         super().set_password(raw_password)
         self.password_changed_at = timezone.now()
+
+    def save(self, *args, **kwargs):
+        # UserManager.create_user stores the hash without calling set_password, so a new
+        # account with a usable password would otherwise have no "password set" time.
+        if self._state.adding and self.password_changed_at is None and self.has_usable_password():
+            self.password_changed_at = timezone.now()
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = {*update_fields, "password_changed_at"}
+        super().save(*args, **kwargs)
