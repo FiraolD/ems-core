@@ -90,10 +90,21 @@ def test_a_leaver_needs_a_leaving_date():
 
 
 def test_leaving_before_hiring_is_rejected_by_the_form_and_the_database():
-    employee = make_employee(status="resigned", termination_date=date(2023, 1, 1))
+    # The form check: an unsaved employee who "left" before being hired.
+    unsaved = Employee(
+        employee_number="E009",
+        full_name="Backwards Dates",
+        employment_date=date(2024, 1, 15),
+        status="resigned",
+        termination_date=date(2023, 1, 1),
+    )
     with pytest.raises(ValidationError) as error:
-        employee.full_clean()
+        unsaved.full_clean()
     assert "termination_date" in error.value.message_dict
+    # The database check: refuses the same thing even if the form check is bypassed.
+    with pytest.raises(IntegrityError), transaction.atomic():
+        unsaved.save()
+    employee = make_employee()
     with pytest.raises(IntegrityError), transaction.atomic():
         Employee.objects.filter(pk=employee.pk).update(termination_date=date(2020, 1, 1))
 

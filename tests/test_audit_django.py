@@ -120,6 +120,30 @@ def test_a_partial_save_only_audits_the_fields_it_saves():
     assert set(event.changes) == {"first_name"}
 
 
+def test_money_is_logged_at_database_precision_and_equal_amounts_are_no_change():
+    from datetime import date
+    from decimal import Decimal
+
+    from modules.hr.models import Employee, SalaryRecord
+
+    employee = Employee.objects.create(
+        employee_number="E1", full_name="A B", employment_date=date(2024, 1, 1)
+    )
+    record = SalaryRecord.objects.create(
+        employee=employee, effective_date=date(2025, 1, 1), basic_salary=Decimal("10000")
+    )
+    created = AuditEvent.objects.get(action="create", object_type="hr.SalaryRecord")
+    assert created.changes["basic_salary"] == {"old": None, "new": "10000.00"}
+    before = AuditEvent.objects.count()
+    record.basic_salary = Decimal("10000.0")  # same amount, written differently
+    record.save()
+    assert AuditEvent.objects.count() == before
+    record.basic_salary = Decimal("12000")
+    record.save()
+    updated = AuditEvent.objects.get(action="update", object_type="hr.SalaryRecord")
+    assert updated.changes == {"basic_salary": {"old": "10000.00", "new": "12000.00"}}
+
+
 def test_noisy_fields_are_excluded():
     user = User.objects.create_user("abebe", password=PASSWORD)
     before = AuditEvent.objects.filter(action="update").count()
