@@ -158,7 +158,7 @@ def test_only_people_due_pay_are_included_and_the_rest_are_listed_or_left_out(of
         {
             "employee_number": nosalary.employee_number,
             "name": "No Salary",
-            "reason": "No salary in force on 2026-09-30.",
+            "reason": "No salary record applies to September 2026.",
         }
     ]
 
@@ -216,12 +216,27 @@ def test_a_rule_set_in_the_system_applies_from_its_start_date(staff, officer):
     assert (october.paye, october.net_salary) == (D("1650.00"), D("8250.00"))
 
 
-def test_leavers_are_prorated_when_the_system_rule_says_so(officer):
+def test_leavers_are_prorated_unless_the_system_rule_says_otherwise(officer):
     make_employee("LEFT", "9000", status="resigned", termination_date=date(2026, 9, 20))
-    assert line(service.calculate_run(2026, 9, officer), "LEFT").basic_earned == D("9000.00")
-    RuleValue.objects.create(key="prorate_leavers", value="yes", effective_from=date(2026, 1, 1))
     row = line(service.calculate_run(2026, 9, officer), "LEFT")
     assert (row.days_worked, row.basic_earned) == (20, D("6000.00"))
+    RuleValue.objects.create(key="prorate_leavers", value="no", effective_from=date(2026, 1, 1))
+    row = line(service.calculate_run(2026, 9, officer), "LEFT")
+    assert (row.days_worked, row.basic_earned) == (None, D("9000.00"))
+
+
+def test_a_raise_pays_from_the_next_month(officer):
+    employee = make_employee("R1", "5000")
+    SalaryRecord.objects.create(employee=employee, effective_date=date(2026, 9, 15), basic_salary=D("6000"))
+    assert line(service.calculate_run(2026, 9, officer), "R1").basic_salary == D("5000.00")
+    assert line(service.calculate_run(2026, 10, officer), "R1").basic_salary == D("6000.00")
+
+
+def test_a_raise_dated_the_first_pays_that_month(officer):
+    employee = make_employee("R2", "5000")
+    SalaryRecord.objects.create(employee=employee, effective_date=date(2026, 10, 1), basic_salary=D("6000"))
+    assert line(service.calculate_run(2026, 9, officer), "R2").basic_salary == D("5000.00")
+    assert line(service.calculate_run(2026, 10, officer), "R2").basic_salary == D("6000.00")
 
 
 def test_a_bad_month_is_refused(officer):

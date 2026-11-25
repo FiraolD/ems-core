@@ -61,3 +61,26 @@ def record_on(records: Iterable[HasEffectiveDate], as_of: date):
         ):
             chosen = record
     return chosen
+
+
+def salary_for_period(records: Iterable[HasEffectiveDate], period_start: date, period_end: date):
+    """The salary record that pays for the month period_start..period_end, or None.
+
+    - The first record an employee ever had (their starting salary) applies from its date, so
+      someone hired mid-month is paid for that month.
+    - Any later record (a raise or other change) applies from the next month, unless it is
+      dated the 1st of a month, when it applies to that month. A raise decided on 15 September
+      therefore first pays in October.
+
+    Of the records that apply, the latest wins.
+    """
+    ordered = sorted(records, key=lambda record: record.effective_date)
+    if not ordered:
+        return None
+    first = ordered[0]
+    chosen = None
+    for record in ordered:
+        limit = period_end if record is first else period_start
+        if record.effective_date <= limit:
+            chosen = record
+    return chosen

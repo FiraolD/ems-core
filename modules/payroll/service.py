@@ -86,13 +86,17 @@ def calculate_run(year: int, month: int, user=None) -> PayrollRun:
     advances = _month_amounts(SalaryAdvance, {"year": year, "month": month})
 
     lines, skipped = [], []
-    employees = Employee.objects.select_related("department", "position").order_by("employee_number")
+    employees = (
+        Employee.objects.select_related("department", "position")
+        .prefetch_related("salary_records")
+        .order_by("employee_number")
+    )
     for employee in employees:
         if not employee.eligible_for_period(start, end):
             continue
-        salary = employee.salary_on(end)
+        salary = employee.salary_for_period(start, end)
         if salary is None:
-            skipped.append(_skipped(employee, f"No salary in force on {end}."))
+            skipped.append(_skipped(employee, f"No salary record applies to {period.label}."))
             continue
 
         gathered = pay_inputs.gather(

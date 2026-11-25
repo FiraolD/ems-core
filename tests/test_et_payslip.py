@@ -201,6 +201,7 @@ def test_default_rules_match_the_old_system():
     assert rules.absence_divisor == 30 and rules.pension_min_days == 10
     assert rules.pension_employee_rate == d("0.07") and rules.pension_employer_rate == d("0.11")
     assert rules.transport_taxable and rules.ot_taxable and rules.bonus_taxable
+    assert rules.prorate_leavers and rules.prorate_allowances  # on unless an admin turns them off
 
 
 def test_unknown_override_is_refused():
@@ -246,22 +247,22 @@ def leaver(rules=None, left=date(2026, 9, 20), **values):
     return slip(rules, termination_date=left, **values)
 
 
-def test_leavers_get_the_full_month_by_default():
+def test_a_leaver_is_paid_to_their_leaving_date_by_default():
     p = leaver()
-    assert p.days_worked is None and p.basic_earned == d("9000.00")
-    assert p.tax.paye == d("1400.00")  # 9000 x 25% - 850
-    assert p.pension.employee_contribution == d("630.00")
-    assert p.net_salary == d("6970.00")  # 9000 - 1400 - 630
-
-
-def test_a_leaver_is_paid_to_their_leaving_date_when_the_switch_is_on():
-    p = leaver(PayRules(prorate_leavers=True))
     assert (p.days_worked, p.basic_earned) == (20, d("6000.00"))  # 9000 x 20 / 30
     assert p.tax.paye == d("700.00")  # 6000 x 20% - 500
     assert p.pension.employee_contribution == d("420.00")
     assert p.pension.employer_contribution == d("660.00")
     assert p.net_salary == d("4880.00")  # 6000 - 700 - 420
     assert p.pension_prorated is False  # that flag is for new hires
+
+
+def test_leavers_get_the_full_month_when_the_switch_is_off():
+    p = leaver(PayRules(prorate_leavers=False))
+    assert p.days_worked is None and p.basic_earned == d("9000.00")
+    assert p.tax.paye == d("1400.00")  # 9000 x 25% - 850
+    assert p.pension.employee_contribution == d("630.00")
+    assert p.net_salary == d("6970.00")  # 9000 - 1400 - 630
 
 
 def test_leaving_on_the_last_day_is_a_full_month_even_with_the_switch():
@@ -305,15 +306,28 @@ def test_leaving_before_the_hire_day_cannot_pay_negative_days():
     assert p.basic_earned == d("0.00") and p.net_salary == d("0.00")
 
 
-def test_allowances_are_not_cut_for_a_new_hire_by_default():
+def test_allowances_are_prorated_for_a_new_hire_by_default():
     p = slip(basic_salary=d("9000"), transport_allowance=d("600"), hire_date=date(2026, 9, 16))
+    assert p.basic_earned == d("4500.00") and p.transport_payable == d("300.00")
+    assert p.gross_earnings == d("4800.00")
+    assert p.tax.paye == d("460.00")  # 4800 x 20% - 500
+    assert p.net_salary == d("4025.00")  # 4800 - 460 - 315
+
+
+def test_allowances_are_paid_in_full_when_the_switch_is_off():
+    p = slip(
+        PayRules(prorate_allowances=False),
+        basic_salary=d("9000"),
+        transport_allowance=d("600"),
+        hire_date=date(2026, 9, 16),
+    )
     assert p.basic_earned == d("4500.00") and p.transport_payable == d("600.00")
     assert p.gross_earnings == d("5100.00")
     assert p.tax.paye == d("520.00")  # 5100 x 20% - 500
     assert p.net_salary == d("4265.00")  # 5100 - 520 - 315
 
 
-def test_allowances_are_prorated_with_the_switch():
+def test_other_allowances_are_prorated_too():
     p = slip(
         PayRules(prorate_allowances=True),
         basic_salary=d("9000"),
