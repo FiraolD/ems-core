@@ -27,6 +27,10 @@ class PayRules:
     ot_taxable: bool = True
     transport_taxable: bool = True
     bonus_taxable: bool = True
+    # Part-month pay. New hires are always paid from their hire date. By default leavers are
+    # paid up to their leaving date, and allowances are prorated along with basic pay.
+    prorate_leavers: bool = True
+    prorate_allowances: bool = True
 
 
 _NAMES = {field.name for field in fields(PayRules)}

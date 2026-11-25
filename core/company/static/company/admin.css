@@ -1,0 +1,33 @@
+:root {
+  --primary: #246b65;
+  --secondary: #1d5651;
+  --accent: #e2f2eb;
+  --header-bg: #173d49;
+  --header-color: #ffffff;
+  --link-fg: #246b65;
+  --link-hover-color: #174f4a;
+  --link-selected-fg: #174f4a;
+  --hairline-color: #e1e8ed;
+  --border-color: #dce5eb;
+  --body-bg: #f5f8fc;
+  --darkened-bg: #f1f6f5;
+  --button-hover-bg: #174f4a;
+}
+
+body { background-color: var(--body-bg); }
+#header { min-height: 64px; padding: 0 24px; box-shadow: 0 2px 12px rgba(15, 42, 54, .12); }
+#site-name { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+#site-name a:link, #site-name a:visited { color: #fff; }
+#user-tools { font-size: 12px; }
+#content { max-width: 1500px; margin: 0 auto; padding: 26px 28px; }
+#content h1 { color: #172b4d; font-weight: 700; letter-spacing: -.035em; }
+.module, .dashboard .module { overflow: hidden; border: 1px solid #e1e8ed; border-radius: 9px; box-shadow: 0 4px 14px rgba(24, 45, 70, .035); }
+.module h2, .module caption, .inline-group h2 { color: #244b4b; background: #eaf4f0; }
+#changelist-filter { border-left-color: #e1e8ed; }
+input, select, textarea, .selector { border-radius: 5px; }
+.button, input[type=submit], input[type=button], .submit-row input, a.button { border-radius: 5px; font-weight: 650; }
+.object-tools a:link, .object-tools a:visited { border-radius: 5px; }
+@media (max-width: 767px) {
+  #header { padding: 0 14px; }
+  #content { padding: 18px 14px; }
+}

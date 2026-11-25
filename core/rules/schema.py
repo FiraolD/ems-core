@@ -28,6 +28,8 @@ LABELS = {
     "ot_taxable": "Overtime is taxable income",
     "transport_taxable": "Transport allowance is taxable income",
     "bonus_taxable": "Bonus is taxable income",
+    "prorate_leavers": "Pay people who leave mid-month only up to their leaving date",
+    "prorate_allowances": "Also prorate allowances for part-month workers",
 }
 
 

@@ -3,7 +3,7 @@ from datetime import date
 
 import pytest
 
-from modules.hr.rules import eligible_for_period, record_on
+from modules.hr.rules import eligible_for_period, record_on, salary_for_period
 
 START, END = date(2026, 3, 1), date(2026, 3, 31)
 
@@ -66,3 +66,73 @@ def test_record_on_ignores_input_order():
 def test_record_on_before_any_record_is_none():
     assert record_on([Rec(date(2026, 1, 1), 1)], date(2025, 12, 31)) is None
     assert record_on([], date(2026, 1, 1)) is None
+
+
+# --- Which salary pays for a month: a raise starts the next month ---------------------
+
+SEP = (date(2026, 9, 1), date(2026, 9, 30))
+OCT = (date(2026, 10, 1), date(2026, 10, 31))
+
+
+def pay(records, month):
+    found = salary_for_period(records, *month)
+    return None if found is None else found.basic
+
+
+STARTING = Rec(date(2020, 1, 1), 100)
+
+
+def test_a_raise_dated_mid_month_pays_from_the_next_month():
+    records = [STARTING, Rec(date(2026, 9, 15), 200)]
+    assert pay(records, SEP) == 100
+    assert pay(records, OCT) == 200
+
+
+def test_a_raise_dated_the_first_of_the_month_pays_that_month():
+    records = [STARTING, Rec(date(2026, 9, 1), 200)]
+    assert pay(records, SEP) == 200
+
+
+def test_a_raise_dated_the_last_day_pays_from_the_next_month():
+    records = [STARTING, Rec(date(2026, 9, 30), 200)]
+    assert pay(records, SEP) == 100
+    assert pay(records, OCT) == 200
+
+
+def test_a_raise_dated_the_first_of_next_month_pays_next_month():
+    records = [STARTING, Rec(date(2026, 10, 1), 200)]
+    assert pay(records, SEP) == 100
+    assert pay(records, OCT) == 200
+
+
+def test_two_changes_in_one_month_leave_the_month_on_the_old_pay():
+    records = [STARTING, Rec(date(2026, 9, 10), 200), Rec(date(2026, 9, 20), 300)]
+    assert pay(records, SEP) == 100
+    assert pay(records, OCT) == 300
+
+
+def test_a_backdated_raise_applies_to_every_month_after_its_month():
+    records = [STARTING, Rec(date(2026, 1, 15), 200)]
+    assert pay(records, (date(2026, 1, 1), date(2026, 1, 31))) == 100
+    assert pay(records, (date(2026, 2, 1), date(2026, 2, 28))) == 200
+    assert pay(records, SEP) == 200
+
+
+def test_the_starting_salary_pays_in_the_hiring_month():
+    records = [Rec(date(2026, 9, 16), 100)]
+    assert pay(records, SEP) == 100
+    assert pay(records, (date(2026, 8, 1), date(2026, 8, 31))) is None
+
+
+def test_a_starting_salary_that_has_not_begun_pays_nothing():
+    assert pay([Rec(date(2026, 10, 5), 100)], SEP) is None
+
+
+def test_the_order_records_are_given_in_does_not_matter():
+    records = [Rec(date(2026, 9, 15), 200), STARTING, Rec(date(2025, 3, 1), 150)]
+    assert pay(records, SEP) == 150
+    assert pay(records, OCT) == 200
+
+
+def test_no_records_means_no_salary():
+    assert salary_for_period([], *SEP) is None

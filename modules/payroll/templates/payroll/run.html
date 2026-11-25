@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Payroll {{ period.label }} | {{ company.legal_name|default:"EMS" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'payroll/payroll.css' %}">{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <a class="pay-back" href="{% url 'payroll:index' %}">&larr; All payroll runs</a>
+
+  <div class="pay-header">
+    <div>
+      <p class="section-eyebrow">PAYROLL RUN</p>
+      <h1>{{ period.label }} <span class="status-badge {{ run.status }}">{{ run.get_status_display }}</span></h1>
+      <p class="pay-meta">
+        {% if run.calculated_at %}Calculated {{ run.calculated_at|date:"j M Y H:i" }}{% if run.calculated_by %} by {{ run.calculated_by.get_username }}{% endif %}.{% endif %}
+        {% if run.submitted_at %} Submitted {{ run.submitted_at|date:"j M Y H:i" }}{% if run.submitted_by %} by {{ run.submitted_by.get_username }}{% endif %}.{% endif %}
+        {% if run.locked_at %} Locked {{ run.locked_at|date:"j M Y H:i" }}{% if run.locked_by %} by {{ run.locked_by.get_username }}{% endif %}.{% endif %}
+      </p>
+    </div>
+    <div class="pay-actions">
+      {% if can_recalculate %}<form method="post" action="{% url 'payroll:act' period.year period.month 'recalculate' %}">{% csrf_token %}<button class="button-secondary" type="submit">Recalculate</button></form>{% endif %}
+      {% if can_submit %}<form method="post" action="{% url 'payroll:act' period.year period.month 'submit' %}">{% csrf_token %}<button class="button-primary" type="submit">Submit for review</button></form>{% endif %}
+      {% if can_return %}<form method="post" action="{% url 'payroll:act' period.year period.month 'return' %}">{% csrf_token %}<button class="button-secondary" type="submit">Return to draft</button></form>{% endif %}
+      {% if can_lock_now %}
+      <form method="post" action="{% url 'payroll:act' period.year period.month 'lock' %}">{% csrf_token %}
+        <div class="pay-field"><label for="lock-password">Your password</label><input id="lock-password" type="password" name="password" autocomplete="current-password" required></div>
+        <button class="button-primary" type="submit">Approve and lock</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if intact is False %}
+    <div class="notice notice-danger"><strong>Do not pay from this payroll.</strong> Its figures no longer match the fingerprint taken when it was locked. Someone may have changed the database directly. Investigate before using it.</div>
+  {% elif intact %}
+    <p class="verified">&#10003; Figures verified against the fingerprint taken when this payroll was locked.</p>
+  {% endif %}
+
+  {% if run.skipped %}
+  <div class="notice">
+    <strong>{{ run.skipped|length }} employee{{ run.skipped|length|pluralize }} could not be calculated</strong>
+    <ul>{% for item in run.skipped %}<li>{{ item.employee_number }} {{ item.name }}: {{ item.reason }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <section class="pay-panel" aria-labelledby="totals-title">
+    <h2 id="totals-title">Totals</h2>
+    <div class="pay-totals">
+      <div class="pay-total"><span>Employees</span><strong>{{ totals.employees }}</strong></div>
+      <div class="pay-total"><span>Gross earnings</span><strong>{{ totals.gross_earnings }}</strong></div>
+      <div class="pay-total"><span>Income tax (PAYE)</span><strong>{{ totals.paye }}</strong></div>
+      <div class="pay-total"><span>Employee pension</span><strong>{{ totals.employee_pension }}</strong></div>
+      <div class="pay-total"><span>Salary advances</span><strong>{{ totals.salary_advance }}</strong></div>
+      <div class="pay-total highlight"><span>Net pay</span><strong>{{ totals.net_salary }}</strong></div>
+      <div class="pay-total"><span>Employer pension</span><strong>{{ totals.employer_pension }}</strong></div>
+      <div class="pay-total"><span>Total cost to employer</span><strong>{{ totals.employer_cost }}</strong></div>
+    </div>
+  </section>
+
+  <section class="pay-panel" aria-labelledby="lines-title">
+    <h2 id="lines-title">Employees</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>No.</th><th>Name</th><th class="num">Basic earned</th><th class="num">Gross</th>
+          <th class="num">Taxable</th><th class="num">Tax</th><th class="num">Pension</th>
+          <th class="num">Absence</th><th class="num">Advance</th><th class="num">Net</th><th></th></tr></thead>
+        <tbody>
+        {% for line in lines %}
+          <tr>
+            <td>{{ line.employee_number }}</td><td>{{ line.employee_name }}</td>
+            <td class="num">{{ line.basic_earned }}</td><td class="num">{{ line.gross_earnings }}</td>
+            <td class="num">{{ line.taxable_income }}</td><td class="num">{{ line.paye }}</td>
+            <td class="num">{{ line.employee_pension }}</td><td class="num">{{ line.absence_deduction }}</td>
+            <td class="num">{{ line.salary_advance }}</td><td class="num"><strong>{{ line.net_salary }}</strong></td>
+            <td>{% if line.warnings %}<span class="check-chip">check: {{ line.warnings }}</span>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty" colspan="11">No employees were calculated.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -166,6 +166,10 @@ class Employee(models.Model):
             .first()
         )
 
+    def salary_for_period(self, period_start: date, period_end: date) -> "SalaryRecord | None":
+        """The salary that pays for a month. A raise applies from the next month."""
+        return rules.salary_for_period(self.salary_records.all(), period_start, period_end)
+
     @property
     def current_salary(self) -> "SalaryRecord | None":
         return self.salary_on(date.today())

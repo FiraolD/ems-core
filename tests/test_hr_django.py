@@ -162,6 +162,18 @@ def test_a_future_raise_does_not_apply_yet():
     assert employee.current_salary.basic_salary == Decimal("10000.00")
 
 
+def test_salary_for_period_applies_a_raise_from_the_next_month():
+    employee = make_employee()
+    raise_to(employee, date(2024, 1, 15), "10000")
+    raise_to(employee, date(2026, 9, 15), "12000")
+    september = (date(2026, 9, 1), date(2026, 9, 30))
+    october = (date(2026, 10, 1), date(2026, 10, 31))
+    assert employee.salary_for_period(*september).basic_salary == Decimal("10000.00")
+    assert employee.salary_for_period(*october).basic_salary == Decimal("12000.00")
+    # Looking up "the salary on a date" still means the record dated on or before it.
+    assert employee.salary_on(date(2026, 9, 20)).basic_salary == Decimal("12000.00")
+
+
 def test_one_salary_per_employee_per_date():
     employee = make_employee()
     raise_to(employee, date(2025, 1, 1), "10000")

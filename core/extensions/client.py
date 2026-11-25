@@ -42,6 +42,8 @@ RULE_KEYS: dict[str, tuple[str, int | None, int | None]] = {
     "ot_taxable": ("bool", None, None),
     "transport_taxable": ("bool", None, None),
     "bonus_taxable": ("bool", None, None),
+    "prorate_leavers": ("bool", None, None),
+    "prorate_allowances": ("bool", None, None),
 }
 
 SECTIONS = {"client", "company", "modules", "country", "rules", "extension"}

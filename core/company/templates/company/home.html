@@ -1,10 +1,60 @@
 {% extends "base.html" %}
+{% block title %}Workspace | {{ company.legal_name|default:"EMS" }}{% endblock %}
 {% block content %}
-<div class="card">
-  <h1>Welcome, {{ user.get_full_name|default:user.get_username }}</h1>
-  <p class="muted">{{ company.legal_name }}</p>
-  <h2>Enabled modules</h2>
-  <ul>{% for name in modules %}<li>{{ name }}</li>{% endfor %}</ul>
-  {% if user.is_staff %}<p><a href="{% url 'admin:index' %}">Administration</a></p>{% endif %}
+<div class="dashboard">
+  <div class="page-kicker"><span class="status-dot"></span> WORKSPACE <span class="kicker-divider">/</span> OVERVIEW</div>
+
+  <section class="welcome-panel" aria-labelledby="welcome-title">
+    <div class="welcome-content">
+      <p class="welcome-eyebrow">YOUR COMPANY WORKSPACE</p>
+      <h1 id="welcome-title">Welcome back, {{ user.get_full_name|default:user.get_username }}</h1>
+      <p class="welcome-description">A clear view of the tools and resources available to your team.</p>
+      <p class="welcome-date">{% now "l, F j, Y" %}</p>
+    </div>
+    {% if user.is_staff %}
+      <a class="button-light" href="{% url 'admin:index' %}">Open administration</a>
+    {% endif %}
+    <span class="welcome-orb welcome-orb-one" aria-hidden="true"></span>
+    <span class="welcome-orb welcome-orb-two" aria-hidden="true"></span>
+  </section>
+
+  <section class="modules-section" aria-labelledby="modules-title">
+    <div class="section-heading">
+      <div>
+        <p class="section-eyebrow">TOOLS FOR YOUR TEAM</p>
+        <h2 id="modules-title">Enabled modules</h2>
+        <p class="section-description">Your workspace is configured with these capabilities.</p>
+      </div>
+      <span class="module-count">{{ modules|length }} active</span>
+    </div>
+
+    <div class="module-grid">
+      {% for name in modules %}
+        <article class="module-card">
+          <div class="module-card-top">
+            <span class="module-icon" aria-hidden="true">
+              {% if name == "hr" %}HR{% else %}{{ name|slice:":2"|upper }}{% endif %}
+            </span>
+            <span class="module-status"><span></span> Enabled</span>
+          </div>
+          <h3>{% if name == "hr" %}Human resources{% else %}{{ name|title }}{% endif %}</h3>
+          <p>Configured for {{ company.legal_name|default:"your company" }}.</p>
+          {% if name == "payroll" and perms.payroll.view_payrollrun %}
+            <a class="module-link" href="{% url 'payroll:index' %}">Open payroll &rarr;</a>
+          {% elif name == "hr" and user.is_staff and perms.hr.view_employee %}
+            <a class="module-link" href="{% url 'admin:hr_employee_changelist' %}">Open employees &rarr;</a>
+          {% endif %}
+        </article>
+      {% empty %}
+        <div class="empty-state">
+          <span class="empty-icon" aria-hidden="true">+</span>
+          <div>
+            <h3>No modules enabled yet</h3>
+            <p>Ask your administrator to configure the tools for this workspace.</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
 </div>
 {% endblock %}
