@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Payroll {{ period.label }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<p><a href="{% url 'payroll:index' %}">&larr; All payrolls</a></p>
+<h1>Payroll {{ period.label }} <span class="badge {{ run.status }}">{{ run.get_status_display }}</span></h1>
+
+<p class="muted">
+  {% if run.calculated_at %}Calculated {{ run.calculated_at|date:"j M Y H:i" }}{% if run.calculated_by %} by {{ run.calculated_by.get_username }}{% endif %}.{% endif %}
+  {% if run.submitted_at %} Submitted {{ run.submitted_at|date:"j M Y H:i" }}{% if run.submitted_by %} by {{ run.submitted_by.get_username }}{% endif %}.{% endif %}
+  {% if run.locked_at %} Locked {{ run.locked_at|date:"j M Y H:i" }}{% if run.locked_by %} by {{ run.locked_by.get_username }}{% endif %}.{% endif %}
+</p>
+
+{% if intact is False %}
+  <div class="notice" style="border-color:#b42318">The figures of this locked payroll no longer match the fingerprint taken when it was locked. Someone may have changed the database directly. Do not pay from it until this is investigated.</div>
+{% elif intact %}
+  <p class="muted">Figures verified against the fingerprint taken when this payroll was locked.</p>
+{% endif %}
+
+{% if run.skipped %}
+<div class="notice">
+  <strong>{{ run.skipped|length }} employee{{ run.skipped|length|pluralize }} could not be calculated:</strong>
+  <ul>{% for item in run.skipped %}<li>{{ item.employee_number }} {{ item.name }}: {{ item.reason }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="actions">
+  {% if can_recalculate %}<form method="post" action="{% url 'payroll:act' period.year period.month 'recalculate' %}">{% csrf_token %}<button type="submit">Recalculate</button></form>{% endif %}
+  {% if can_submit %}<form method="post" action="{% url 'payroll:act' period.year period.month 'submit' %}">{% csrf_token %}<button type="submit">Submit for review</button></form>{% endif %}
+  {% if can_return %}<form method="post" action="{% url 'payroll:act' period.year period.month 'return' %}">{% csrf_token %}<button type="submit">Return to draft</button></form>{% endif %}
+  {% if can_lock_now %}
+  <form method="post" action="{% url 'payroll:act' period.year period.month 'lock' %}">{% csrf_token %}
+    <label>Your password <input type="password" name="password" autocomplete="current-password" required></label>
+    <button type="submit">Approve and lock</button>
+  </form>
+  {% endif %}
+</div>
+
+<h2>Totals</h2>
+<table style="max-width: 40rem;">
+  <tr><th>Employees</th><td class="num">{{ totals.employees }}</td></tr>
+  <tr><th>Gross earnings</th><td class="num">{{ totals.gross_earnings }}</td></tr>
+  <tr><th>Income tax (PAYE)</th><td class="num">{{ totals.paye }}</td></tr>
+  <tr><th>Employee pension</th><td class="num">{{ totals.employee_pension }}</td></tr>
+  <tr><th>Salary advances</th><td class="num">{{ totals.salary_advance }}</td></tr>
+  <tr><th>Net pay</th><td class="num"><strong>{{ totals.net_salary }}</strong></td></tr>
+  <tr><th>Employer pension</th><td class="num">{{ totals.employer_pension }}</td></tr>
+  <tr><th>Total cost to employer</th><td class="num">{{ totals.employer_cost }}</td></tr>
+</table>
+
+<h2>Employees</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th>No.</th><th>Name</th><th class="num">Basic</th><th class="num">Gross</th>
+    <th class="num">Taxable</th><th class="num">Tax</th><th class="num">Pension</th>
+    <th class="num">Absence</th><th class="num">Advance</th><th class="num">Net</th><th></th></tr></thead>
+  <tbody>
+  {% for line in lines %}
+    <tr>
+      <td>{{ line.employee_number }}</td><td>{{ line.employee_name }}</td>
+      <td class="num">{{ line.basic_earned }}</td><td class="num">{{ line.gross_earnings }}</td>
+      <td class="num">{{ line.taxable_income }}</td><td class="num">{{ line.paye }}</td>
+      <td class="num">{{ line.employee_pension }}</td><td class="num">{{ line.absence_deduction }}</td>
+      <td class="num">{{ line.salary_advance }}</td><td class="num"><strong>{{ line.net_salary }}</strong></td>
+      <td>{% if line.warnings %}<span class="badge" style="background:#fee2e2">check: {{ line.warnings }}</span>{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="11" class="muted">No employees were calculated.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

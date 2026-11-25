@@ -13,7 +13,7 @@ addopts = "-ra"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["staticfiles", "media"]
+extend-exclude = ["staticfiles", "media", "**/migrations/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

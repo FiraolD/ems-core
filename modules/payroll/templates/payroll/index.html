@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Payroll{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<h1>Payroll</h1>
+
+{% if perms.payroll.calculate_payrollrun %}
+<div class="card" style="max-width: 32rem; margin-bottom: 1.5rem;">
+  <h2>Calculate a month</h2>
+  <form method="post" action="{% url 'payroll:calculate' %}">{% csrf_token %}
+    <label>Year <input type="number" name="year" min="2000" max="2100" required></label>
+    <label>Month <input type="number" name="month" min="1" max="12" required></label>
+    <button type="submit">Calculate</button>
+  </form>
+  <p class="muted">A month that is already in review or locked is not recalculated.</p>
+</div>
+{% endif %}
+
+<div class="scroll">
+<table>
+  <thead><tr><th>Month</th><th>Status</th><th class="num">Employees</th><th class="num">Gross</th>
+    <th class="num">Income tax</th><th class="num">Net pay</th><th class="num">Employer cost</th></tr></thead>
+  <tbody>
+  {% for run, totals in rows %}
+    <tr>
+      <td><a href="{% url 'payroll:run' run.period.year run.period.month %}">{{ run.period.label }}</a></td>
+      <td><span class="badge {{ run.status }}">{{ run.get_status_display }}</span></td>
+      <td class="num">{{ totals.employees }}</td>
+      <td class="num">{{ totals.gross_earnings }}</td>
+      <td class="num">{{ totals.paye }}</td>
+      <td class="num">{{ totals.net_salary }}</td>
+      <td class="num">{{ totals.employer_cost }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="muted">No payroll has been calculated yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

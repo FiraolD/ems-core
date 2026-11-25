@@ -1,6 +1,7 @@
 """Ethiopia: statutory pay rules (income tax, pension, absence deductions) and the payslip."""
 from __future__ import annotations
 
+from .absence import DayRecord
 from .payslip import Payslip, PayslipInput, compute_payslip
 from .rules import PayRules, resolve_rules, rules_snapshot
 from .tax import Bracket, default_brackets, validate_brackets
@@ -14,6 +15,7 @@ __all__ = [
     "CURRENCY",
     "NAME",
     "Bracket",
+    "DayRecord",
     "PayRules",
     "Payslip",
     "PayslipInput",

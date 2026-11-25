@@ -83,9 +83,9 @@ def test_prod_refuses_modules_that_are_not_installed(tmp_path):
     config = tmp_path / "client.toml"
     config.write_text(
         '[client]\nslug = "x"\n[company]\nlegal_name = "X"\n'
-        '[modules]\nenabled = ["hr", "payroll"]\n',
+        '[modules]\nenabled = ["hr", "attendance"]\n',
         encoding="utf-8",
     )
     result = import_prod(tmp_path, **{**good_env(), "EMS_CLIENT_CONFIG": str(config)})
     assert result.returncode != 0
-    assert "payroll" in result.stderr
+    assert "attendance" in result.stderr

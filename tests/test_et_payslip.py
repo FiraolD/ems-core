@@ -113,7 +113,7 @@ def test_overtime_is_taxable_by_default_and_switchable():
 
 def test_new_hire_basic_and_pension_are_prorated():
     p = slip(basic_salary=d("3000"), hire_date=date(2026, 9, 21))
-    assert (p.hire_days, p.basic_earned) == (10, d("1000.00"))  # 3000 x 10 / 30
+    assert (p.days_worked, p.basic_earned) == (10, d("1000.00"))  # 3000 x 10 / 30
     assert (p.pension_service_days, p.pension_prorated) == (10, True)
     assert p.pensionable_salary == d("1000.00")
     assert p.pension.employee_contribution == d("70.00")
@@ -124,7 +124,7 @@ def test_new_hire_basic_and_pension_are_prorated():
 
 def test_new_hire_under_ten_days_is_paid_but_has_no_pension():
     p = slip(basic_salary=d("3000"), hire_date=date(2026, 9, 22))
-    assert (p.hire_days, p.basic_earned) == (9, d("900.00"))
+    assert (p.days_worked, p.basic_earned) == (9, d("900.00"))
     assert p.pension.employee_contribution == d("0.00")
     assert p.gross_earnings == p.net_salary == d("900.00")
 
@@ -132,13 +132,13 @@ def test_new_hire_under_ten_days_is_paid_but_has_no_pension():
 def test_hired_on_the_first_or_before_is_a_full_month():
     for hired in (date(2026, 9, 1), date(2025, 3, 3)):
         p = slip(basic_salary=d("3000"), hire_date=hired)
-        assert p.hire_days is None and p.basic_earned == d("3000.00")
+        assert p.days_worked is None and p.basic_earned == d("3000.00")
 
 
 def test_hired_after_the_period_is_not_prorated_here():
     # Not on this month's payroll at all; deciding that is the payroll run's job.
     p = slip(basic_salary=d("3000"), hire_date=date(2026, 10, 5))
-    assert p.hire_days is None and p.basic_earned == d("3000.00")
+    assert p.days_worked is None and p.basic_earned == d("3000.00")
 
 
 def test_new_hire_with_an_absence():
@@ -236,3 +236,109 @@ def test_the_ethiopia_pack_is_found_by_code():
 def test_unknown_or_malformed_packs_are_refused(code):
     with pytest.raises(UnknownCountryPack):
         get_pack(code)
+
+
+# --- Leavers and allowances: the two switches -----------------------------------------
+
+
+def leaver(rules=None, left=date(2026, 9, 20), **values):
+    values.setdefault("basic_salary", d("9000"))
+    return slip(rules, termination_date=left, **values)
+
+
+def test_leavers_get_the_full_month_by_default():
+    p = leaver()
+    assert p.days_worked is None and p.basic_earned == d("9000.00")
+    assert p.tax.paye == d("1400.00")  # 9000 x 25% - 850
+    assert p.pension.employee_contribution == d("630.00")
+    assert p.net_salary == d("6970.00")  # 9000 - 1400 - 630
+
+
+def test_a_leaver_is_paid_to_their_leaving_date_when_the_switch_is_on():
+    p = leaver(PayRules(prorate_leavers=True))
+    assert (p.days_worked, p.basic_earned) == (20, d("6000.00"))  # 9000 x 20 / 30
+    assert p.tax.paye == d("700.00")  # 6000 x 20% - 500
+    assert p.pension.employee_contribution == d("420.00")
+    assert p.pension.employer_contribution == d("660.00")
+    assert p.net_salary == d("4880.00")  # 6000 - 700 - 420
+    assert p.pension_prorated is False  # that flag is for new hires
+
+
+def test_leaving_on_the_last_day_is_a_full_month_even_with_the_switch():
+    p = leaver(PayRules(prorate_leavers=True), left=date(2026, 9, 30))
+    assert p.days_worked is None and p.basic_earned == d("9000.00")
+
+
+def test_leaving_on_the_first_day_is_one_day():
+    p = leaver(PayRules(prorate_leavers=True), left=date(2026, 9, 1))
+    assert (p.days_worked, p.basic_earned) == (1, d("300.00"))
+
+
+def test_a_leaver_pension_follows_earned_basic_less_absence():
+    p = leaver(
+        PayRules(prorate_leavers=True),
+        attendance=[DayRecord(date(2026, 9, 5), "absent")],
+    )
+    # earned 6000, absence 9000/30 = 300 -> pensionable 5700 -> 7% = 399
+    assert p.pensionable_salary == d("5700.00")
+    assert p.pension.employee_contribution == d("399.00")
+
+
+def test_hired_and_left_in_the_same_month():
+    p = slip(
+        PayRules(prorate_leavers=True),
+        basic_salary=d("9000"),
+        hire_date=date(2026, 9, 10),
+        termination_date=date(2026, 9, 19),
+    )
+    assert (p.days_worked, p.basic_earned) == (10, d("3000.00"))
+    assert p.pensionable_salary == d("3000.00")  # 10 days meets the pension minimum
+
+
+def test_leaving_before_the_hire_day_cannot_pay_negative_days():
+    p = slip(
+        PayRules(prorate_leavers=True),
+        basic_salary=d("9000"),
+        hire_date=date(2026, 9, 20),
+        termination_date=date(2026, 9, 10),
+    )
+    assert p.basic_earned == d("0.00") and p.net_salary == d("0.00")
+
+
+def test_allowances_are_not_cut_for_a_new_hire_by_default():
+    p = slip(basic_salary=d("9000"), transport_allowance=d("600"), hire_date=date(2026, 9, 16))
+    assert p.basic_earned == d("4500.00") and p.transport_payable == d("600.00")
+    assert p.gross_earnings == d("5100.00")
+    assert p.tax.paye == d("520.00")  # 5100 x 20% - 500
+    assert p.net_salary == d("4265.00")  # 5100 - 520 - 315
+
+
+def test_allowances_are_prorated_with_the_switch():
+    p = slip(
+        PayRules(prorate_allowances=True),
+        basic_salary=d("9000"),
+        transport_allowance=d("600"),
+        other_allowances=d("300"),
+        hire_date=date(2026, 9, 16),
+    )
+    assert p.transport_payable == d("300.00") and p.other_allowances == d("150.00")
+    assert p.gross_earnings == d("4950.00")  # 4500 + 300 + 150
+    assert p.taxable_income == d("4950.00")
+    assert p.tax.paye == d("490.00")  # 4950 x 20% - 500
+    assert p.net_salary == d("4145.00")  # 4950 - 490 - 315
+
+
+def test_allowance_switch_changes_nothing_for_a_full_month():
+    on = slip(PayRules(prorate_allowances=True), basic_salary=d("9000"), transport_allowance=d("600"))
+    off = slip(basic_salary=d("9000"), transport_allowance=d("600"))
+    assert on == off
+
+
+def test_payslip_pension_matches_the_standalone_new_hire_rule():
+    from countries.et.pension import pension_base
+
+    for hired in (date(2026, 9, 2), date(2026, 9, 16), date(2026, 9, 21), date(2026, 9, 22)):
+        p = slip(basic_salary=d("3000"), hire_date=hired)
+        base = pension_base(d("3000"), hired, SEP_1, SEP_30)
+        assert p.pensionable_salary == base.pensionable
+        assert p.pension_service_days == base.service_days

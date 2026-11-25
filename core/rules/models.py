@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from .schema import RuleValueError, parse_rule_text, rule_choices, store_rule_value
+from .schema import RULE_KEYS, RuleValueError, parse_rule_text, store_rule_value
 
 
 class RuleValue(models.Model):
@@ -13,7 +13,8 @@ class RuleValue(models.Model):
     months can always be explained.
     """
 
-    key = models.CharField(max_length=40, choices=rule_choices())
+    # Which keys exist lives in code (schema.RULE_KEYS), so adding a rule needs no migration.
+    key = models.CharField(max_length=40)
     value = models.CharField(max_length=40, help_text="Yes/no, a whole number, or a fraction.")
     effective_from = models.DateField(help_text="The first day this value applies.")
     note = models.CharField(max_length=255, blank=True, help_text="Why it changed.")
@@ -31,6 +32,8 @@ class RuleValue(models.Model):
         return f"{self.key} = {self.value} from {self.effective_from}"
 
     def clean(self):
+        if self.key and self.key not in RULE_KEYS:
+            raise ValidationError({"key": f"Unknown rule {self.key!r}."})
         if not self.key or not self.value:
             return
         try:

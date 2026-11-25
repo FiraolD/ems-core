@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
@@ -9,3 +10,7 @@ urlpatterns = [
     path("", include("core.health.urls")),
     path("", home, name="home"),
 ]
+
+if "modules.payroll" in settings.INSTALLED_APPS:
+    urlpatterns.insert(-1, path("payroll/", include("modules.payroll.urls")))
+

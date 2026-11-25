@@ -6,10 +6,20 @@ from django.core.exceptions import ValidationError
 from countries import get_pack
 
 from .models import RuleValue, TaxBand, TaxSchedule
+from .schema import rule_choices
+
+
+class RuleValueForm(forms.ModelForm):
+    key = forms.ChoiceField(choices=rule_choices)
+
+    class Meta:
+        model = RuleValue
+        fields = ("key", "value", "effective_from", "note")
 
 
 @admin.register(RuleValue)
 class RuleValueAdmin(admin.ModelAdmin):
+    form = RuleValueForm
     list_display = ("key", "value", "effective_from", "note")
     list_filter = ("key",)
     ordering = ("key", "-effective_from")

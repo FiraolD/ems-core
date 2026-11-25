@@ -16,7 +16,7 @@ from decimal import Decimal
 from core.money import money
 
 from .absence import AbsenceResult, DayRecord, compute_absence
-from .pension import PensionResult, calculate_pension, pension_base, service_days
+from .pension import PensionResult, calculate_pension
 from .rules import PayRules
 from .tax import Bracket, TaxResult, calculate_bonus_tax, calculate_paye
 
@@ -33,14 +33,15 @@ class PayslipInput:
     bonus: Decimal = Decimal("0")
     salary_advance: Decimal = Decimal("0")
     hire_date: date | None = None
+    termination_date: date | None = None  # set for someone who has left
     attendance: Sequence[DayRecord] = ()  # absences and paid leave inside the period
 
 
 @dataclass(frozen=True)
 class Payslip:
     basic_salary: Decimal  # the agreed monthly basic
-    basic_earned: Decimal  # basic for this month: prorated by days worked for a new hire
-    hire_days: int | None  # days worked in the month, set only for someone hired during it
+    basic_earned: Decimal  # basic for this month: prorated when only part of it was worked
+    days_worked: int | None  # set only when the month was part-worked (hired or left in it)
     transport_payable: Decimal  # transport after the leave and absence deduction
     other_allowances: Decimal
     overtime_pay: Decimal
@@ -73,17 +74,33 @@ def compute_payslip(
 
     absence = compute_absence(data.attendance, basic, transport, rules.absence_divisor)
 
-    # Someone hired during the month is paid only for the days from their hire date, on the
-    # same 30-day company month used for absence and pension.
-    hire_days = None
-    basic_earned = basic
-    if data.hire_date and data.period_start < data.hire_date <= data.period_end:
-        hire_days = service_days(data.hire_date, data.period_start, data.period_end)
-        basic_earned = min(money(basic * hire_days / rules.absence_divisor), basic)
+    # Part-month work. Someone hired during the month is always paid from their hire date.
+    # Someone who left during it is paid to their leaving date only when the rules say so
+    # (prorate_leavers). Both use the same 30-day company month as absence and pension.
+    hired_in_month = bool(data.hire_date and data.period_start < data.hire_date <= data.period_end)
+    left_in_month = bool(
+        rules.prorate_leavers
+        and data.termination_date
+        and data.period_start <= data.termination_date < data.period_end
+    )
+    days_worked = None
+    if hired_in_month or left_in_month:
+        first = data.hire_date if hired_in_month else data.period_start
+        last = data.termination_date if left_in_month else data.period_end
+        days_worked = max((last - first).days + 1, 0)
+
+    def earned(amount: Decimal) -> Decimal:
+        if days_worked is None:
+            return amount
+        return min(money(amount * days_worked / rules.absence_divisor), amount)
+
+    basic_earned = earned(basic)
+    transport_earned = earned(transport) if rules.prorate_allowances else transport
+    other_earned = earned(other) if rules.prorate_allowances else other
 
     # Transport paid is what is left after leave and absence days are taken off.
-    transport_payable = max(money(transport - absence.transport_deduction), money(0))
-    gross = money(basic_earned + transport_payable + other + overtime + bonus)
+    transport_payable = max(money(transport_earned - absence.transport_deduction), money(0))
+    gross = money(basic_earned + transport_payable + other_earned + overtime + bonus)
 
     # Taxable income: basic earned after unpaid absence, plus each other part only where the
     # rules say it is taxable.
@@ -93,7 +110,7 @@ def compute_payslip(
             - absence.basic_deduction
             + (overtime if rules.ot_taxable else 0)
             + (transport_payable if rules.transport_taxable else 0)
-            + (other if data.other_allowances_taxable else 0)
+            + (other_earned if data.other_allowances_taxable else 0)
         ),
         money(0),
     )
@@ -108,17 +125,14 @@ def compute_payslip(
         bonus_tax = money(0)
     tax = calculate_paye(taxable_income, brackets)
 
-    base = pension_base(
-        basic,
-        data.hire_date,
-        data.period_start,
-        data.period_end,
-        absence_deduction=absence.basic_deduction,
-        min_days=rules.pension_min_days,
-        divisor=rules.absence_divisor,
-    )
+    # Pension: a new hire pays nothing for fewer than pension_min_days of service, otherwise
+    # on the pay they earned. Everyone else pays on basic earned after unpaid absence.
+    if hired_in_month:
+        pensionable = money(0) if days_worked < rules.pension_min_days else basic_earned
+    else:
+        pensionable = max(money(basic_earned - absence.basic_deduction), money(0))
     pension = calculate_pension(
-        base.pensionable, rules.pension_employee_rate, rules.pension_employer_rate
+        pensionable, rules.pension_employee_rate, rules.pension_employer_rate
     )
 
     total_deductions = money(
@@ -130,9 +144,9 @@ def compute_payslip(
     return Payslip(
         basic_salary=basic,
         basic_earned=basic_earned,
-        hire_days=hire_days,
+        days_worked=days_worked,
         transport_payable=transport_payable,
-        other_allowances=other,
+        other_allowances=other_earned,
         overtime_pay=overtime,
         bonus=bonus,
         gross_earnings=gross,
@@ -141,8 +155,8 @@ def compute_payslip(
         tax=tax,
         bonus_tax=bonus_tax,
         pensionable_salary=pension.pensionable_salary,
-        pension_service_days=base.service_days,
-        pension_prorated=base.prorated,
+        pension_service_days=days_worked if hired_in_month else None,
+        pension_prorated=hired_in_month,
         pension=pension,
         salary_advance=advance,
         total_deductions=total_deductions,
