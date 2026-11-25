@@ -39,8 +39,9 @@
           </div>
           <h3>{% if name == "hr" %}Human resources{% else %}{{ name|title }}{% endif %}</h3>
           <p>Configured for {{ company.legal_name|default:"your company" }}.</p>
-          {% if name == "payroll" and perms.payroll.view_payrollrun %}
-            <a class="module-link" href="{% url 'payroll:index' %}">Open payroll &rarr;</a>
+          {% if name == "payroll" %}
+            {% if perms.payroll.view_payrollrun %}<a class="module-link" href="{% url 'payroll:index' %}">Open payroll &rarr;</a>{% endif %}
+            {% if user.employee %}<a class="module-link" href="{% url 'payroll:my_payslips' %}">My payslips &rarr;</a>{% endif %}
           {% elif name == "hr" and user.is_staff and perms.hr.view_employee %}
             <a class="module-link" href="{% url 'admin:hr_employee_changelist' %}">Open employees &rarr;</a>
           {% endif %}

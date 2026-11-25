@@ -42,6 +42,20 @@
   </div>
   {% endif %}
 
+  {% if perms.payroll.view_payrollline and run.lines.exists %}
+  <section class="pay-panel" aria-labelledby="export-title">
+    <h2 id="export-title">Reports and payslips</h2>
+    {% if not run.is_locked %}<p class="pay-meta">This payroll is not locked yet, so downloads are marked DRAFT.</p>{% endif %}
+    <div class="pay-actions">
+      <a class="button-secondary" href="{% url 'payroll:payslips' period.year period.month %}">All payslips (PDF)</a>
+      <a class="button-secondary" href="{% url 'payroll:report' period.year period.month 'register' %}">Payroll register (CSV)</a>
+      <a class="button-secondary" href="{% url 'payroll:report' period.year period.month 'income-tax' %}">Income tax (CSV)</a>
+      <a class="button-secondary" href="{% url 'payroll:report' period.year period.month 'pension' %}">Pension (CSV)</a>
+      {% if run.is_locked %}<a class="button-secondary" href="{% url 'payroll:report' period.year period.month 'bank-transfer' %}">Bank transfer list (CSV)</a>{% endif %}
+    </div>
+  </section>
+  {% endif %}
+
   <section class="pay-panel" aria-labelledby="totals-title">
     <h2 id="totals-title">Totals</h2>
     <div class="pay-totals">
@@ -71,7 +85,7 @@
             <td class="num">{{ line.taxable_income }}</td><td class="num">{{ line.paye }}</td>
             <td class="num">{{ line.employee_pension }}</td><td class="num">{{ line.absence_deduction }}</td>
             <td class="num">{{ line.salary_advance }}</td><td class="num"><strong>{{ line.net_salary }}</strong></td>
-            <td>{% if line.warnings %}<span class="check-chip">check: {{ line.warnings }}</span>{% endif %}</td>
+            <td><a href="{% url 'payroll:payslip' line.pk %}">Payslip</a> {% if line.warnings %}<span class="check-chip">check: {{ line.warnings }}</span>{% endif %}</td>
           </tr>
         {% empty %}
           <tr><td class="empty" colspan="11">No employees were calculated.</td></tr>
