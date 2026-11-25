@@ -471,3 +471,22 @@ def test_payroll_results_cannot_be_edited_in_admin(client, staff, officer):
     assert client.get("/admin/payroll/payrollrun/add/").status_code == 403
     assert client.post(f"/admin/payroll/payrollrun/{run.pk}/delete/", {"post": "yes"}).status_code == 403
     assert PayrollRun.objects.filter(pk=run.pk).exists()
+
+
+# --- Look and navigation -------------------------------------------------------------
+
+
+def test_payroll_pages_use_the_shared_layout_and_their_stylesheet(client, staff, officer):
+    client.force_login(officer)
+    service.calculate_run(2026, 9, officer)
+    for url in ("/payroll/", "/payroll/2026/9/"):
+        html = client.get(url).content.decode()
+        assert 'href="/static/company/app.css"' in html  # the shared layout
+        assert 'href="/static/payroll/payroll.css"' in html  # this module's styles
+
+
+def test_home_links_to_payroll_only_for_people_who_may_see_it(client, roles, officer):
+    client.force_login(officer)
+    assert 'href="/payroll/"' in client.get("/").content.decode()
+    client.force_login(user_with_role("employee", "plain"))
+    assert "Open payroll" not in client.get("/").content.decode()

@@ -363,3 +363,6 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+.module-link { display: inline-block; margin-top: .85rem; color: var(--primary-dark); font-size: .8rem; font-weight: 700; text-decoration: none; }
+.module-link:hover { text-decoration: underline; }
