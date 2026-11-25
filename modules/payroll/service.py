@@ -209,16 +209,17 @@ def run_totals(run: PayrollRun) -> Totals:
         net=Sum("net_salary"),
         cost=Sum("employer_cost"),
     )
-    zero = money(0)
+    # SUM() comes back without trailing zeros on some databases (12220, not 12220.00), so
+    # every total is rounded to the santim here, once, for the page, audit log and reports.
     return Totals(
         employees=agg["employees"],
-        gross_earnings=agg["gross"] or zero,
-        paye=agg["paye"] or zero,
-        employee_pension=agg["ee"] or zero,
-        employer_pension=agg["er"] or zero,
-        salary_advance=agg["advance"] or zero,
-        net_salary=agg["net"] or zero,
-        employer_cost=agg["cost"] or zero,
+        gross_earnings=money(agg["gross"] or 0),
+        paye=money(agg["paye"] or 0),
+        employee_pension=money(agg["ee"] or 0),
+        employer_pension=money(agg["er"] or 0),
+        salary_advance=money(agg["advance"] or 0),
+        net_salary=money(agg["net"] or 0),
+        employer_cost=money(agg["cost"] or 0),
     )
 
 

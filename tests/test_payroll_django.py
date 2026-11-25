@@ -120,6 +120,16 @@ def test_a_month_is_calculated_with_the_expected_figures(staff, officer):
     assert totals.employer_cost == D("17250.00")
 
 
+def test_totals_always_show_santims_even_when_empty_or_round(officer):
+    empty = service.run_totals(service.calculate_run(2026, 9, officer))
+    assert empty.employees == 0
+    for value in (empty.gross_earnings, empty.paye, empty.net_salary, empty.employer_cost):
+        assert str(value) == "0.00"
+    make_employee("ROUND", "10000")
+    full = service.run_totals(service.calculate_run(2026, 9, officer))
+    assert str(full.gross_earnings) == "10000.00"  # not "10000"
+
+
 def test_the_run_keeps_the_rules_it_was_calculated_with(staff, officer):
     run = service.calculate_run(2026, 9, officer)
     assert run.rules_snapshot["pension_employee_rate"] == "0.07"
