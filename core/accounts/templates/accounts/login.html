@@ -1,14 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Sign in{% endblock %}
+{% block title %}Sign in | {{ company.legal_name|default:"EMS" }}{% endblock %}
 {% block content %}
-<div class="card">
-  <h1>Sign in</h1>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_div }}
-    <input type="hidden" name="next" value="{{ next }}">
-    <button type="submit">Sign in</button>
-  </form>
-  <p class="muted">Too many failed attempts will temporarily lock the account.</p>
+<div class="auth-layout">
+  <section class="auth-intro">
+    <p class="section-eyebrow">EMPLOYEE MANAGEMENT</p>
+    <h1>People operations,<br><span>made clearer.</span></h1>
+    <p>Sign in to your company workspace to continue to the tools and information you need.</p>
+    <div class="auth-assurance"><span class="assurance-icon" aria-hidden="true"></span> Private and secure access</div>
+  </section>
+
+  <section class="auth-card" aria-labelledby="sign-in-title">
+    <div class="auth-card-heading">
+      <p class="section-eyebrow">WELCOME BACK</p>
+      <h2 id="sign-in-title">Sign in</h2>
+      <p>Enter your account details to continue.</p>
+    </div>
+    <form class="stacked-form" method="post">
+      {% csrf_token %}
+      {{ form.as_div }}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="button-primary" type="submit">Sign in</button>
+    </form>
+    <p class="form-footnote">For your security, repeated failed attempts temporarily lock your account.</p>
+  </section>
 </div>
 {% endblock %}
