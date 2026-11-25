@@ -123,6 +123,8 @@ EMS_LOCKOUT_MAX_ATTEMPTS = env_int("EMS_LOCKOUT_MAX_ATTEMPTS", 5)
 EMS_LOCKOUT_MINUTES = env_int("EMS_LOCKOUT_MINUTES", 15)
 # Force a password change after this many days. 0 turns expiry off.
 EMS_PASSWORD_MAX_AGE_DAYS = env_int("EMS_PASSWORD_MAX_AGE_DAYS", 0)
+# Path to a TrueType font for payslip PDFs when names include Amharic (e.g. Noto Sans Ethiopic).
+EMS_PDF_FONT_PATH = env("EMS_PDF_FONT_PATH", "") or ""
 # Trust the X-Forwarded-For header for audit-log addresses. Only when a proxy you control
 # sits in front of the app, because otherwise callers could write a false address.
 EMS_BEHIND_PROXY = env_bool("EMS_BEHIND_PROXY", False)

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}My payslips | {{ company.legal_name|default:"EMS" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'payroll/payroll.css' %}">{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <div class="pay-header">
+    <div>
+      <p class="section-eyebrow">SELF-SERVICE</p>
+      <h1>My payslips</h1>
+      <p class="pay-meta">Payslips appear here once the month's payroll has been approved.</p>
+    </div>
+  </div>
+
+  {% if not employee %}
+    <div class="notice">Your sign-in is not linked to an employee record, so there are no payslips to show. Ask HR to link it.</div>
+  {% else %}
+  <section class="pay-panel" aria-labelledby="slips-title">
+    <h2 id="slips-title">{{ employee.full_name }}</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>Month</th><th class="num">Gross</th><th class="num">Deductions</th><th class="num">Net pay</th><th></th></tr></thead>
+        <tbody>
+        {% for line in lines %}
+          <tr>
+            <td>{{ line.run.period.label }}</td>
+            <td class="num">{{ line.gross_earnings }}</td>
+            <td class="num">{{ line.total_deductions }}</td>
+            <td class="num"><strong>{{ line.net_salary }}</strong></td>
+            <td><a href="{% url 'payroll:my_payslip' line.pk %}">Download PDF</a></td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty" colspan="5">No approved payslips yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
