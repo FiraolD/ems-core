@@ -148,7 +148,7 @@ USE_I18N = True
 USE_TZ = True
 
 # --- Static and uploaded files ------------------------------------------------------
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 _client_static = _CLIENT_DIR / "static"
 STATICFILES_DIRS = [_client_static] if _client_static.is_dir() else []

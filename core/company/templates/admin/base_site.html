@@ -1,0 +1,12 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block title %}{{ title }} | {{ site_title|default:_("EMS administration") }}{% endblock %}
+{% block branding %}
+  <div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_("EMS administration") }}</a></div>
+{% endblock %}
+{% block nav-global %}{% endblock %}
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'company/admin.css' %}">
+{% endblock %}

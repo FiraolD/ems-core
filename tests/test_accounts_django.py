@@ -32,6 +32,12 @@ def sign_in(client, password=PASSWORD, username="abebe"):
     return client.post(reverse("accounts:login"), {"username": username, "password": password})
 
 
+def test_login_stylesheet_uses_a_site_root_url(client):
+    response = client.get(reverse("accounts:login"))
+    assert response.status_code == 200
+    assert 'href="/static/company/app.css"' in response.content.decode()
+
+
 def signed_in(client):
     return "_auth_user_id" in client.session
 
