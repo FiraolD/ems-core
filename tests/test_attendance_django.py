@@ -93,5 +93,6 @@ def test_role_grants_for_attendance(roles):
     hr_user = user_with_role("hr_manager")
     assert hr_user.has_perm("attendance.change_attendancerecord")
     assert not hr_user.has_perm("attendance.delete_attendancerecord")
-    assert user_with_role("payroll_officer").has_perm("attendance.view_attendancerecord")
-    assert not user_with_role("payroll_officer").has_perm("attendance.add_attendancerecord")
+    officer = user_with_role("payroll_officer")
+    assert officer.has_perm("attendance.view_attendancerecord")
+    assert not officer.has_perm("attendance.add_attendancerecord")
