@@ -72,3 +72,8 @@ def test_unsupported_characters_become_question_marks_without_a_unicode_font(tmp
 def test_unpaid_days_note_shows():
     out = text(payslip_pdf(line(unpaid_days=D("2"), absence_deduction=D("666.67")), "January 2026", COMPANY))
     assert "Unpaid days: 2" in out
+
+
+def test_a_full_month_employee_has_no_days_worked_figure():
+    out = text(payslip_pdf(line(days_worked=None), "January 2026", COMPANY))
+    assert "Full month" in out
