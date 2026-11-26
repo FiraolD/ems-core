@@ -11,8 +11,8 @@ tin = ""
 address = ""
 
 [modules]
-# Only enable what the client bought. Available now: hr, payroll.
-# Coming: attendance, leave, overtime.
+# Only enable what the client bought. Available now: hr, attendance, payroll.
+# Coming: leave, overtime.
 enabled = ["hr", "payroll"]
 
 [country]
