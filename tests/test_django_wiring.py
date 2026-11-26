@@ -35,13 +35,23 @@ def test_settings_load_the_template_client():
     assert settings.MISSING_MODULES == []
 
 
-def import_prod(tmp_path, **extra):
-    """Import the production settings in a fresh interpreter with exactly these variables."""
+def import_prod(tmp_path, hide=(), **extra):
+    """Import the production settings in a fresh interpreter with exactly these variables.
+
+    ``hide`` names module packages to pretend are not installed, so the "module enabled but
+    not built" guard can be tested however many modules exist."""
     keep = {k: v for k, v in os.environ.items()
             if k not in {"SECRET_KEY", "ALLOWED_HOSTS", "EMS_CLIENT_CONFIG"}}
     keep.update(extra)
+    prelude = (
+        "import importlib.util as u\n"
+        f"hidden = {tuple(hide)!r}\n"
+        "real = u.find_spec\n"
+        "u.find_spec = lambda n, *a, **k: None if n in hidden else real(n, *a, **k)\n"
+        "import config.settings.prod"
+    )
     return subprocess.run(
-        [sys.executable, "-c", "import config.settings.prod"],
+        [sys.executable, "-c", prelude],
         cwd=ROOT, env=keep, capture_output=True, text=True,
     )
 
@@ -86,6 +96,8 @@ def test_prod_refuses_modules_that_are_not_installed(tmp_path):
         '[modules]\nenabled = ["hr", "overtime"]\n',
         encoding="utf-8",
     )
-    result = import_prod(tmp_path, **{**good_env(), "EMS_CLIENT_CONFIG": str(config)})
+    result = import_prod(
+        tmp_path, hide=("modules.overtime",), **{**good_env(), "EMS_CLIENT_CONFIG": str(config)}
+    )
     assert result.returncode != 0
     assert "overtime" in result.stderr

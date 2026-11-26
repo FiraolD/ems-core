@@ -11,9 +11,8 @@ tin = ""
 address = ""
 
 [modules]
-# Only enable what the client bought. Available now: hr, attendance, leave, payroll.
-# Coming: overtime.
-enabled = ["hr", "attendance", "leave", "payroll"]
+# Only enable what the client bought. Available now: hr, attendance, leave, overtime, payroll.
+enabled = ["hr", "attendance", "leave", "overtime", "payroll"]
 
 [country]
 pack = "et"                        # statutory rules: Ethiopia
