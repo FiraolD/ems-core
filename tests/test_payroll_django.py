@@ -492,7 +492,7 @@ def test_payroll_pages_use_the_shared_layout_and_their_stylesheet(client, staff,
     for url in ("/payroll/", "/payroll/2026/9/"):
         html = client.get(url).content.decode()
         assert 'href="/static/company/app.css"' in html  # the shared layout
-        assert 'href="/static/payroll/payroll.css"' in html  # this module's styles
+        assert 'href="/static/company/pages.css"' in html  # the shared page styles
 
 
 def test_home_links_to_payroll_only_for_people_who_may_see_it(client, roles, officer):

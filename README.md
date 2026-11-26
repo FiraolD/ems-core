@@ -34,6 +34,21 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+No PostgreSQL on your machine? For trying things out only, set `EMS_DEV_SQLITE=1` to use a local
+SQLite file (`db.sqlite3`, ignored by git). It has no database-level audit-log protection, so never
+use it for real data. In PowerShell:
+
+```powershell
+$env:EMS_DEV_SQLITE = "1"
+python manage.py migrate
+python manage.py sync_roles
+python manage.py createsuperuser
+python manage.py seed_tax_schedule
+python manage.py seed_leave_types
+python manage.py seed_overtime_categories
+python manage.py runserver
+```
+
 ## How a client is configured
 
 Each install points `EMS_CLIENT_CONFIG` at the client's `client.toml`. It sets company details,
