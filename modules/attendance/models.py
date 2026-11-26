@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from core import period_lock
+
 from . import logic
 
 
@@ -55,3 +57,11 @@ class AttendanceRecord(models.Model):
     def clean(self):
         if self.employee_id and self.date and self.date < self.employee.employment_date:
             raise ValidationError({"date": "This is before the employee's start date."})
+        if self.date and period_lock.is_closed(self.date):
+            raise ValidationError({"date": f"The {self.date:%B %Y} payroll is locked."})
+
+    def save(self, *args, **kwargs):
+        # Records for a locked month can no longer be added or changed: payslips already use them.
+        if self.date:
+            period_lock.ensure_open(self.date, "Attendance")
+        super().save(*args, **kwargs)

@@ -20,3 +20,11 @@ class AttendanceConfig(AppConfig):
         roles.grant("hr_manager", "attendance.import_attendancerecord")
         for role in ("payroll_officer", "auditor"):
             roles.grant(role, "attendance.view_attendancerecord", "attendance.view_publicholiday")
+
+        # When payroll is enabled, this module's records feed into it.
+        from django.apps import apps
+
+        if apps.is_installed("modules.payroll"):
+            from . import payroll
+
+            payroll.register()

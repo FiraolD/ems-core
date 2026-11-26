@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
-from core import workcalendar
+from core import period_lock, workcalendar
 from core.audit.service import record
 from modules.hr.models import Employee
 from modules.hr.rules import LEFT_STATUSES
@@ -22,6 +22,13 @@ ADD = "overtime.add_overtimeentry"
 
 class OvertimeRefused(Exception):
     """The overtime cannot be accepted. The message is safe to show the user."""
+
+
+def _open(day: date) -> None:
+    try:
+        period_lock.ensure_open(day, "Overtime")
+    except period_lock.PeriodClosed as exc:
+        raise OvertimeRefused(str(exc)) from exc
 
 
 def _is_own(employee: Employee, user) -> bool:
@@ -39,6 +46,7 @@ def record_overtime(employee: Employee, work_date: date, hours, kind: str, user,
         raise OvertimeRefused("This is before the employee's start date.")
     if work_date > timezone.localdate():
         raise OvertimeRefused("Overtime cannot be recorded for a future date.")
+    _open(work_date)
     category = OvertimeCategory.objects.filter(kind=kind, is_active=True).first()
     if category is None:
         raise OvertimeRefused("There is no active rate for that kind of overtime. Ask HR to set it up.")
@@ -71,6 +79,8 @@ def decide(entry: OvertimeEntry, user, *, approve: bool, note: str = "") -> Over
         raise OvertimeRefused("You cannot decide your own overtime. Ask someone else to.")
     if fresh.status != OvertimeEntry.Status.PENDING:
         raise OvertimeRefused(f"This entry is already {fresh.get_status_display().lower()}.")
+    if approve:
+        _open(fresh.work_date)
     fresh.status = OvertimeEntry.Status.APPROVED if approve else OvertimeEntry.Status.REJECTED
     fresh.decided_by, fresh.decided_at, fresh.decision_note = user, timezone.now(), note
     fresh.save()
@@ -91,6 +101,7 @@ def cancel(entry: OvertimeEntry, user) -> OvertimeEntry:
     elif fresh.status == OvertimeEntry.Status.APPROVED:
         if not user.has_perm(APPROVE):
             raise PermissionDenied("Only an approver can cancel approved overtime.")
+        _open(fresh.work_date)
     else:
         raise OvertimeRefused(f"This entry is already {fresh.get_status_display().lower()}.")
     old = fresh.status
