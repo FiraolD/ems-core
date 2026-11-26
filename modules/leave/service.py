@@ -11,7 +11,7 @@ from django.db.models import Sum
 from django.db.models.functions import ExtractYear
 from django.utils import timezone
 
-from core import workcalendar
+from core import period_lock, workcalendar
 from core.audit.service import record
 from modules.hr.models import Employee
 from modules.hr.rules import LEFT_STATUSES
@@ -25,6 +25,13 @@ ADD = "leave.add_leaverequest"
 
 class LeaveRefused(Exception):
     """The request cannot be accepted. The message is safe to show the user."""
+
+
+def _open(start: date, end: date) -> None:
+    try:
+        period_lock.ensure_open_range(start, end, "Leave")
+    except period_lock.PeriodClosed as exc:
+        raise LeaveRefused(str(exc)) from exc
 
 
 def count_days(start: date, end: date, half_day: bool = False) -> Decimal:
@@ -117,6 +124,7 @@ def request_leave(employee: Employee, leave_type: LeaveType, start: date, end: d
     if start < employee.employment_date:
         raise LeaveRefused("This is before the employee's start date.")
     days = count_days(start, end, half_day)
+    _open(start, end)
     # Lock the employee's row so two requests at once cannot both spend the last days.
     Employee.objects.select_for_update().get(pk=employee.pk)
     _check_overlap(employee, start, end)
@@ -144,6 +152,7 @@ def decide(request: LeaveRequest, user, *, approve: bool, note: str = "") -> Lea
     if fresh.status != LeaveRequest.Status.PENDING:
         raise LeaveRefused(f"This request is already {fresh.get_status_display().lower()}.")
     if approve:
+        _open(fresh.start_date, fresh.end_date)
         _check_overlap(fresh.employee, fresh.start_date, fresh.end_date, exclude_pk=fresh.pk)
         _check_balance(fresh.employee, fresh.leave_type, fresh.start_date.year, fresh.days, exclude_pk=fresh.pk)
     fresh.status = LeaveRequest.Status.APPROVED if approve else LeaveRequest.Status.REJECTED
@@ -167,6 +176,7 @@ def cancel(request: LeaveRequest, user) -> LeaveRequest:
     elif fresh.status == LeaveRequest.Status.APPROVED:
         if not user.has_perm(APPROVE):
             raise PermissionDenied("Only an approver can cancel approved leave.")
+        _open(fresh.start_date, fresh.end_date)
     else:
         raise LeaveRefused(f"This request is already {fresh.get_status_display().lower()}.")
     old = fresh.status

@@ -21,3 +21,11 @@ class LeaveConfig(AppConfig):
         roles.grant("hr_manager", "leave.view_leaverequest", "leave.add_leaverequest", "leave.approve_leaverequest")
         for role in ("payroll_officer", "auditor"):
             roles.grant(role, "leave.view_leavetype", "leave.view_leaverequest", "leave.view_leaveadjustment")
+
+        # When payroll is enabled, this module's records feed into it.
+        from django.apps import apps
+
+        if apps.is_installed("modules.payroll"):
+            from . import payroll
+
+            payroll.register()

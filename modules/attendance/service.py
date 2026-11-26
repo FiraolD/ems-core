@@ -7,6 +7,7 @@ from datetime import date
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 
+from core import period_lock
 from core.audit.service import record
 from modules.hr.models import Employee
 
@@ -41,6 +42,8 @@ def import_csv(text: str, user, *, today: date | None = None) -> ImportSummary:
     for row in parsed.rows:
         if row.day < employees[row.employee_number].employment_date:
             errors.append(f"{row.employee_number} {row.day}: before the employee's start date.")
+    closed = sorted({row.day.strftime("%B %Y") for row in parsed.rows if period_lock.is_closed(row.day)})
+    errors.extend(f"{month}: that month's payroll is locked, so its attendance cannot be changed." for month in closed)
     if errors:
         raise ImportRejected(errors)
 

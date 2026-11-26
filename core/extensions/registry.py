@@ -52,6 +52,15 @@ class HookRegistry:
         entries.append((order, self._counter, func))
         entries.sort(key=lambda entry: (entry[0], entry[1]))
 
+    def register_once(self, name: str, func: Callable[..., Any], *, order: int = 100) -> bool:
+        """Like ``register`` but does nothing if ``func`` is already on the hook. Lets a module
+        register itself at start-up and again in tests without running twice. Returns True if added."""
+        self._require_declared(name)
+        if func in self.functions(name):
+            return False
+        self.register(name, func, order=order)
+        return True
+
     def hook(self, name: str, *, order: int = 100) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """Decorator form of ``register``."""
 

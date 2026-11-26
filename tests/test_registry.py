@@ -107,3 +107,15 @@ def test_a_failing_hook_is_not_swallowed(reg):
 
 def test_global_registry_declares_ems_ready():
     assert "ems.ready" in global_registry.declared()
+
+
+def test_register_once_does_not_double_register():
+    reg = HookRegistry()
+    reg.declare("demo.thing")
+
+    def fn(value):
+        return value + 1
+
+    assert reg.register_once("demo.thing", fn) is True
+    assert reg.register_once("demo.thing", fn) is False
+    assert reg.pipe("demo.thing", 0) == 1

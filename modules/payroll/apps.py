@@ -7,10 +7,17 @@ class PayrollConfig(AppConfig):
     verbose_name = "Payroll"
 
     def ready(self):
+        from core import period_lock
         from core.accounts.roles import registry as roles
         from core.audit.registry import register as audit_register
 
-        from . import inputs  # noqa: F401  (declares the payroll.employee_inputs hook)
+        from . import (
+            inputs,  # noqa: F401  (declares the payroll.employee_inputs hook)
+            lockguard,
+        )
+
+        # Attendance, leave and overtime for a locked month can no longer be changed.
+        period_lock.register(lockguard.is_locked)
 
         # Runs are audited by the workflow itself (calculated, submitted, locked...). The
         # rows people type in are audited field by field.

@@ -20,3 +20,11 @@ class OvertimeConfig(AppConfig):
                     "overtime.add_overtimeentry", "overtime.approve_overtimeentry")
         for role in ("payroll_officer", "auditor"):
             roles.grant(role, "overtime.view_overtimecategory", "overtime.view_overtimeentry")
+
+        # When payroll is enabled, this module's records feed into it.
+        from django.apps import apps
+
+        if apps.is_installed("modules.payroll"):
+            from . import payroll
+
+            payroll.register()
