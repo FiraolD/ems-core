@@ -87,6 +87,9 @@ def _amount(value) -> str:
 
 
 def _days(value) -> str:
+    """Days as text. Empty means the employee was paid for the whole month."""
+    if value is None:
+        return "Full month"
     return f"{Decimal(value).normalize():f}"
 
 
