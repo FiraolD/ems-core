@@ -5,15 +5,14 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
-from django.apps import apps
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Sum
 from django.db.models.functions import ExtractYear
 from django.utils import timezone
 
+from core import workcalendar
 from core.audit.service import record
-from core.rules.service import rules_for
 from modules.hr.models import Employee
 from modules.hr.rules import LEFT_STATUSES
 
@@ -28,22 +27,10 @@ class LeaveRefused(Exception):
     """The request cannot be accepted. The message is safe to show the user."""
 
 
-def _holidays(start: date, end: date) -> set[date]:
-    if not apps.is_installed("modules.attendance"):
-        return set()
-    from modules.attendance.models import PublicHoliday
-
-    return set(PublicHoliday.objects.filter(date__range=(start, end)).values_list("date", flat=True))
-
-
-def _rest_day(on: date) -> int:
-    return getattr(rules_for(on).rules, "weekly_rest_day", 6)
-
-
 def count_days(start: date, end: date, half_day: bool = False) -> Decimal:
     try:
         return logic.count_leave_days(
-            start, end, rest_day=_rest_day(end), holidays=_holidays(start, end), half_day=half_day
+            start, end, rest_day=workcalendar.rest_day(end), holidays=workcalendar.public_holidays(start, end), half_day=half_day
         )
     except logic.LeaveError as exc:
         raise LeaveRefused(str(exc)) from exc
