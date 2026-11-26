@@ -13,7 +13,7 @@ address = ""
 [modules]
 # Only enable what the client bought. Available now: hr, attendance, payroll.
 # Coming: leave, overtime.
-enabled = ["hr", "payroll"]
+enabled = ["hr", "attendance", "payroll"]
 
 [country]
 pack = "et"                        # statutory rules: Ethiopia
