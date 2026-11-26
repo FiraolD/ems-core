@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Import attendance | {{ company.legal_name|default:"EMS" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'company/pages.css' %}">{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <div class="pay-header">
+    <div>
+      <p class="section-eyebrow">ATTENDANCE</p>
+      <h1>Import attendance</h1>
+      <p class="pay-meta">Upload a CSV with the columns <strong>employee_number, date, status, note</strong>. Dates are YYYY-MM-DD; status is present, late, absent or half_day.</p>
+    </div>
+    {% if perms.attendance.view_attendancerecord %}<a class="button-secondary" href="{% url 'attendance:report' %}">Monthly report</a>{% endif %}
+  </div>
+
+  {% if errors %}
+  <div class="notice notice-danger">
+    <strong>Nothing was imported.</strong> Fix these and upload the file again:
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    {% if more_errors %}<p>&hellip; and {{ more_errors }} more.</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <section class="pay-panel" aria-labelledby="up-title">
+    <h2 id="up-title">Upload a file</h2>
+    <form class="pay-form" method="post" enctype="multipart/form-data">{% csrf_token %}
+      <div class="pay-field wide"><label for="file">CSV file</label><input id="file" type="file" name="file" accept=".csv,text/csv" required></div>
+      <button class="button-primary" type="submit">Import</button>
+    </form>
+    <p class="pay-help">The whole file is checked first: if any row has a problem, nothing is imported. Only absences and half days reduce pay; days with no record count as worked. Months whose payroll is locked cannot be changed.</p>
+  </section>
+</div>
+{% endblock %}

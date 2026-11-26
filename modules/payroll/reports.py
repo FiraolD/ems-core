@@ -7,16 +7,16 @@ No Django imports: lines are anything with the PayrollLine attribute names.
 """
 from __future__ import annotations
 
-import csv
-import io
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
+from core.csvsafe import (  # noqa: F401  (re-exported for callers and tests)
+    BOM,
+    safe_cell,
+    write_csv,
+)
 from core.money import money
-
-BOM = "﻿"  # lets Excel open the file as UTF-8, so Amharic names display correctly
-_FORMULA_STARTS = ("=", "+", "-", "@", "\t", "\r")
 
 
 @dataclass(frozen=True)
@@ -28,26 +28,8 @@ class Report:
     totals: tuple  # same width as headers; "" where a total makes no sense
 
 
-def safe_cell(value) -> str:
-    """Text for one CSV cell. Text that a spreadsheet would run as a formula is neutralised."""
-    if value is None:
-        return ""
-    if isinstance(value, Decimal):
-        return f"{value:.2f}"
-    text = str(value)
-    if text.startswith(_FORMULA_STARTS):
-        return "'" + text
-    return text
-
-
 def to_csv(report: Report) -> str:
-    out = io.StringIO()
-    writer = csv.writer(out, lineterminator="\r\n")
-    writer.writerow([safe_cell(h) for h in report.headers])
-    for row in report.rows:
-        writer.writerow([safe_cell(c) for c in row])
-    writer.writerow([safe_cell(c) for c in report.totals])
-    return BOM + out.getvalue()
+    return write_csv(report.headers, report.rows, report.totals)
 
 
 def _sum(lines: Sequence, attr: str) -> Decimal:

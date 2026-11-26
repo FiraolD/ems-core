@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Payroll | {{ company.legal_name|default:"EMS" }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'payroll/payroll.css' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'company/pages.css' %}">{% endblock %}
 {% block content %}
 <div class="dashboard">
   <div class="page-kicker"><span class="status-dot"></span> WORKSPACE <span class="kicker-divider">/</span> PAYROLL</div>

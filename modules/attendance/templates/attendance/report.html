@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Attendance report | {{ company.legal_name|default:"EMS" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'company/pages.css' %}">{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <div class="pay-header">
+    <div>
+      <p class="section-eyebrow">ATTENDANCE</p>
+      <h1>{{ label }}</h1>
+      <p class="pay-meta">Counts of recorded days. Days nobody recorded are not counted as present.</p>
+    </div>
+    <div class="pay-actions">
+      <a class="button-secondary" href="{% url 'attendance:report_csv' year month %}">Download CSV</a>
+      {% if perms.attendance.import_attendancerecord %}<a class="button-secondary" href="{% url 'attendance:import' %}">Import</a>{% endif %}
+    </div>
+  </div>
+
+  <section class="pay-panel" aria-labelledby="pick-title">
+    <h2 id="pick-title">Choose a month</h2>
+    <form class="pay-form" method="get">
+      <div class="pay-field"><label for="year">Year</label><input id="year" type="number" name="year" min="2000" max="2100" value="{{ year }}"></div>
+      <div class="pay-field"><label for="month">Month (1-12)</label><input id="month" type="number" name="month" min="1" max="12" value="{{ month }}"></div>
+      <button class="button-primary" type="submit">Show</button>
+    </form>
+  </section>
+
+  <section class="pay-panel" aria-labelledby="rep-title">
+    <h2 id="rep-title">Employees</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr>{% for h in headers %}<th{% if forloop.counter > 2 %} class="num"{% endif %}>{{ h }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>{% for cell in row %}<td{% if forloop.counter > 2 %} class="num"{% endif %}>{{ cell }}</td>{% endfor %}</tr>
+        {% empty %}
+          <tr><td class="empty" colspan="6">No employees for this month.</td></tr>
+        {% endfor %}
+        </tbody>
+        {% if rows %}<tfoot><tr>{% for cell in totals %}<td{% if forloop.counter > 2 %} class="num"{% endif %}><strong>{{ cell }}</strong></td>{% endfor %}</tr></tfoot>{% endif %}
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

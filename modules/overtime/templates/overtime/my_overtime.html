@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Overtime | {{ company.legal_name|default:"EMS" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'company/pages.css' %}">{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <div class="pay-header">
+    <div>
+      <p class="section-eyebrow">SELF-SERVICE</p>
+      <h1>Overtime</h1>
+      <p class="pay-meta">Record hours worked beyond your normal day. Approved overtime is added to your pay.</p>
+    </div>
+    {% if perms.overtime.approve_overtimeentry %}<a class="button-secondary" href="{% url 'overtime:approvals' %}">Approve overtime</a>{% endif %}
+  </div>
+
+  {% if not employee and not can_record_for_others %}
+    <div class="notice">Your sign-in is not linked to an employee record. Ask HR to link it.</div>
+  {% else %}
+  <section class="pay-panel" aria-labelledby="rec-title">
+    <h2 id="rec-title">Record overtime</h2>
+    <form class="pay-form" method="post" action="{% url 'overtime:record' %}">{% csrf_token %}
+      {% if can_record_for_others %}
+      <div class="pay-field"><label for="emp">Employee number (blank = me)</label><input id="emp" type="text" name="employee_number"></div>
+      {% endif %}
+      <div class="pay-field"><label for="day">Date worked</label><input id="day" type="date" name="work_date" required></div>
+      <div class="pay-field"><label for="hours">Hours</label><input id="hours" type="number" name="hours" min="0.25" max="16" step="0.25" required></div>
+      <div class="pay-field"><label for="kind">Kind</label>
+        <select id="kind" name="kind" required>{% for c in categories %}<option value="{{ c.kind }}">{{ c.get_kind_display }} (x{{ c.multiplier }})</option>{% endfor %}</select></div>
+      <div class="pay-field wide"><label for="reason">Reason (optional)</label><input id="reason" type="text" name="reason" maxlength="255"></div>
+      <button class="button-primary" type="submit">Record</button>
+    </form>
+    <p class="pay-help">Work on the weekly rest day or a public holiday must use that rate. Overtime cannot be recorded for a month whose payroll is locked.</p>
+  </section>
+
+  <section class="pay-panel" aria-labelledby="mine-title">
+    <h2 id="mine-title">My overtime</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>Date</th><th class="num">Hours</th><th>Kind</th><th class="num">Rate</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for e in entries %}
+          <tr>
+            <td>{{ e.work_date|date:"j M Y" }}</td><td class="num">{{ e.hours }}</td><td>{{ e.category.get_kind_display }}</td>
+            <td class="num">x{{ e.multiplier }}</td>
+            <td><span class="status-badge {{ e.status }}">{{ e.get_status_display }}</span>{% if e.decision_note %} <span class="pay-meta">{{ e.decision_note }}</span>{% endif %}</td>
+            <td>{% if e.status == "pending" %}<form class="pay-inline" method="post" action="{% url 'overtime:cancel' e.pk %}">{% csrf_token %}<button class="button-secondary button-small" type="submit">Cancel</button></form>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty" colspan="6">No overtime recorded yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Leave | {{ company.legal_name|default:"EMS" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'company/pages.css' %}">{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <div class="pay-header">
+    <div>
+      <p class="section-eyebrow">SELF-SERVICE</p>
+      <h1>Leave</h1>
+      <p class="pay-meta">Request time off and see how much you have left.</p>
+    </div>
+    {% if perms.leave.approve_leaverequest %}<a class="button-secondary" href="{% url 'leave:approvals' %}">Approve requests</a>{% endif %}
+  </div>
+
+  {% if not employee and not can_request_for_others %}
+    <div class="notice">Your sign-in is not linked to an employee record, so there is no leave to show. Ask HR to link it.</div>
+  {% else %}
+
+  {% if balances %}
+  <section class="pay-panel" aria-labelledby="bal-title">
+    <h2 id="bal-title">Balance for {{ year }}</h2>
+    <div class="balance-grid">
+      {% for leave_type, bal in balances %}
+      <div class="pay-total highlight">
+        <span>{{ leave_type.name }}</span>
+        <strong>{{ bal.remaining }} days left</strong>
+        <span>{{ bal.entitled }} earned{% if bal.carried_in %} + {{ bal.carried_in }} carried over{% endif %}{% if bal.adjustments %} {{ bal.adjustments|stringformat:"+g" }} adjusted{% endif %}, {{ bal.used }} used</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="pay-panel" aria-labelledby="req-title">
+    <h2 id="req-title">Request leave</h2>
+    <form class="pay-form" method="post" action="{% url 'leave:request' %}">{% csrf_token %}
+      {% if can_request_for_others %}
+      <div class="pay-field"><label for="emp">Employee number (blank = me)</label><input id="emp" type="text" name="employee_number"></div>
+      {% endif %}
+      <div class="pay-field"><label for="type">Type</label>
+        <select id="type" name="leave_type" required>{% for t in types %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}</select></div>
+      <div class="pay-field"><label for="start">First day</label><input id="start" type="date" name="start_date" required></div>
+      <div class="pay-field"><label for="end">Last day</label><input id="end" type="date" name="end_date"></div>
+      <label class="pay-check"><input type="checkbox" name="half_day"> Half day</label>
+      <div class="pay-field wide"><label for="reason">Reason (optional)</label><input id="reason" type="text" name="reason" maxlength="255"></div>
+      <button class="button-primary" type="submit">Request</button>
+    </form>
+    <p class="pay-help">Rest days and public holidays are not counted. A request must stay within one calendar year.</p>
+  </section>
+
+  <section class="pay-panel" aria-labelledby="mine-title">
+    <h2 id="mine-title">My requests</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>Type</th><th>From</th><th>To</th><th class="num">Days</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for r in requests %}
+          <tr>
+            <td>{{ r.leave_type.name }}</td><td>{{ r.start_date|date:"j M Y" }}</td><td>{{ r.end_date|date:"j M Y" }}</td>
+            <td class="num">{{ r.days }}</td>
+            <td><span class="status-badge {{ r.status }}">{{ r.get_status_display }}</span>{% if r.decision_note %} <span class="pay-meta">{{ r.decision_note }}</span>{% endif %}</td>
+            <td>{% if r.status == "pending" %}<form class="pay-inline" method="post" action="{% url 'leave:cancel' r.pk %}">{% csrf_token %}<button class="button-secondary button-small" type="submit">Cancel</button></form>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty" colspan="6">No leave requests yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
