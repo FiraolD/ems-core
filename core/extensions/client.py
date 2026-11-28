@@ -67,6 +67,9 @@ class ClientConfig:
     rule_overrides: Mapping[str, Any]
     extension_package: str | None
     source_path: Path | None = None
+    # Values for the client's own extension code, from [extension.settings]. Text, whole
+    # numbers and true/false only; money is written as quoted text so it is never a float.
+    extension_settings: Mapping[str, Any] = MappingProxyType({})
 
     def has_module(self, name: str) -> bool:
         return name in self.enabled_modules
@@ -180,10 +183,28 @@ def parse_client_config(
         if ok:
             rules[key] = normalised
 
-    package = _section(raw, "extension", errors).get("package")
+    extension = _section(raw, "extension", errors)
+    unknown_ext = sorted(set(extension) - {"package", "settings"})
+    if unknown_ext:
+        errors.append(f"[extension] unknown key(s): {', '.join(unknown_ext)}. Known keys: package, settings")
+    package = extension.get("package")
     if package is not None and (not isinstance(package, str) or not _PACKAGE.match(package)):
         errors.append("[extension] package must be a Python package name, e.g. 'extension_pkg'")
         package = None
+    ext_settings: dict[str, Any] = {}
+    settings_raw = extension.get("settings", {})
+    if not isinstance(settings_raw, Mapping):
+        errors.append("[extension.settings] must be a table")
+        settings_raw = {}
+    for key, value in settings_raw.items():
+        if isinstance(value, float):
+            errors.append(f'[extension.settings] {key} must not be a decimal number; write money as quoted text, e.g. "500.00"')
+        elif isinstance(value, (str, int, bool)):
+            ext_settings[key] = value
+        else:
+            errors.append(f"[extension.settings] {key} must be text, a whole number or true/false")
+    if ext_settings and package is None:
+        errors.append("[extension.settings] has values but no [extension] package to use them")
 
     if errors:
         where = f" in {source_path}" if source_path else ""
@@ -198,6 +219,7 @@ def parse_client_config(
         rule_overrides=MappingProxyType(rules),
         extension_package=package,
         source_path=source_path,
+        extension_settings=MappingProxyType(ext_settings),
     )
 
 

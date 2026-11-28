@@ -201,3 +201,39 @@ def test_error_names_the_file(tmp_path):
     path.write_text('[client]\nslug = "acme"\n', encoding="utf-8")
     with pytest.raises(ClientConfigError, match="client.toml"):
         load_client_config(path)
+
+
+def with_extension(**extension):
+    raw = valid()
+    raw["extension"] = extension
+    return raw
+
+
+def test_extension_settings_are_read_and_cannot_be_changed():
+    cfg = parse_client_config(
+        with_extension(package="ext", settings={"bonus": "500.00", "days": 3, "on": True})
+    )
+    assert cfg.extension_settings == {"bonus": "500.00", "days": 3, "on": True}
+    with pytest.raises(TypeError):
+        cfg.extension_settings["bonus"] = "1"
+
+
+def test_no_extension_settings_means_an_empty_read_only_mapping():
+    cfg = parse_client_config(valid())
+    assert dict(cfg.extension_settings) == {}
+
+
+def test_decimal_numbers_in_extension_settings_are_refused_so_money_stays_exact():
+    assert "quoted text" in error_text(with_extension(package="ext", settings={"bonus": 500.5}))
+
+
+def test_other_extension_setting_types_are_refused():
+    assert "text, a whole number or true/false" in error_text(
+        with_extension(package="ext", settings={"x": [1, 2]})
+    )
+    assert "must be a table" in error_text(with_extension(package="ext", settings="oops"))
+
+
+def test_settings_without_a_package_are_refused_and_unknown_keys_named():
+    assert "no [extension] package" in error_text(with_extension(settings={"x": "1"}))
+    assert "unknown key(s): pakage" in error_text(with_extension(pakage="ext"))
