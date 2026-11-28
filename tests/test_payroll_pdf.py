@@ -8,7 +8,12 @@ import pytest
 pytest.importorskip("reportlab")
 pypdf = pytest.importorskip("pypdf")
 
-from modules.payroll.payslip_pdf import CompanyInfo, bulk_payslips_pdf, payslip_pdf  # noqa: E402
+from modules.payroll.payslip_pdf import (  # noqa: E402
+    CompanyInfo,
+    bulk_payslips_pdf,
+    deduction_rows,
+    payslip_pdf,
+)
 
 COMPANY = CompanyInfo(name="Acme PLC", tin="0012345", address="Addis Ababa")
 
@@ -77,3 +82,19 @@ def test_unpaid_days_note_shows():
 def test_a_full_month_employee_has_no_days_worked_figure():
     out = text(payslip_pdf(line(days_worked=None), "January 2026", COMPANY))
     assert "Full month" in out
+
+
+def test_listed_deductions_add_up_to_total_deductions():
+    slip = line(unpaid_days=D("2"), absence_deduction=D("666.67"), salary_advance=D("200.00"),
+                total_deductions=D("3216.67"))  # 1650 + 700 + 666.67 + 200
+    rows = deduction_rows(slip)
+    assert [name for name, _ in rows] == ["Income tax (PAYE)", "Employee pension", "Absence (unpaid days)", "Salary advance"]
+    assert sum(amount for _, amount in rows) == slip.total_deductions
+
+
+def test_bonus_tax_is_a_note_not_a_second_deduction():
+    slip = line(bonus=D("500.00"), bonus_tax=D("150.00"), paye=D("2580.00"), total_deductions=D("3280.00"))
+    assert all(name != "Bonus tax" for name, _ in deduction_rows(slip))
+    assert sum(amount for _, amount in deduction_rows(slip)) == slip.total_deductions
+    out = text(payslip_pdf(slip, "January 2026", COMPANY))
+    assert "Income tax includes 150.00 charged on the bonus" in out
