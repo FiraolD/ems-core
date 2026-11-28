@@ -104,6 +104,18 @@ def _styles(fonts: Fonts):
     }
 
 
+def deduction_rows(line) -> list[tuple[str, Decimal]]:
+    """The deductions listed on a payslip. They add up to ``total_deductions``: income tax (which
+    already includes any tax on a bonus), pension, the unpaid-absence deduction and any advance."""
+    rows = [
+        ("Income tax (PAYE)", line.paye),
+        ("Employee pension", line.employee_pension),
+        ("Absence (unpaid days)", line.absence_deduction),
+        ("Salary advance", line.salary_advance),
+    ]
+    return [(name, amount) for name, amount in rows if Decimal(amount) != 0 or name.startswith("Income")]
+
+
 def _slip_story(line, period_label: str, company: CompanyInfo, fonts: Fonts, draft: bool):
     st = _styles(fonts)
     t = lambda v: _text(v, fonts)  # noqa: E731
@@ -137,10 +149,8 @@ def _slip_story(line, period_label: str, company: CompanyInfo, fonts: Fonts, dra
     earnings = [("Basic salary (earned)", line.basic_earned), ("Transport allowance", line.transport_payable),
                 ("Other allowances", line.other_allowances), ("Overtime", line.overtime_pay),
                 ("Bonus", line.bonus)]
-    deductions = [("Income tax (PAYE)", line.paye), ("Bonus tax", line.bonus_tax),
-                  ("Employee pension", line.employee_pension), ("Salary advance", line.salary_advance)]
     shown_e = [(n, a) for n, a in earnings if Decimal(a) != 0 or n.startswith("Basic")]
-    shown_d = [(n, a) for n, a in deductions if Decimal(a) != 0 or n.startswith("Income")]
+    shown_d = deduction_rows(line)
 
     rows = [[Paragraph("EARNINGS", st["label"]), Paragraph(f"AMOUNT ({cur})", st["label"]),
              Paragraph("DEDUCTIONS", st["label"]), Paragraph(f"AMOUNT ({cur})", st["label"])]]
@@ -174,7 +184,9 @@ def _slip_story(line, period_label: str, company: CompanyInfo, fonts: Fonts, dra
 
     notes = []
     if Decimal(line.unpaid_days) > 0:
-        notes.append(f"Unpaid days: {_days(line.unpaid_days)}; absence deduction {_amount(line.absence_deduction)}.")
+        notes.append(f"Unpaid days: {_days(line.unpaid_days)}.")
+    if Decimal(line.bonus_tax) > 0:
+        notes.append(f"Income tax includes {_amount(line.bonus_tax)} charged on the bonus.")
     notes.append(f"Taxable income {_amount(line.taxable_income)}; pensionable salary {_amount(line.pensionable_salary)}; "
                  f"employer pension contribution {_amount(line.employer_pension)}.")
     if line.bank_name or line.bank_account_number:
