@@ -14,3 +14,7 @@ urlpatterns = [
 if "modules.payroll" in settings.INSTALLED_APPS:
     urlpatterns.insert(-1, path("payroll/", include("modules.payroll.urls")))
 
+
+for _module, _prefix in (("leave", "leave/"), ("overtime", "overtime/"), ("attendance", "attendance/")):
+    if f"modules.{_module}" in settings.INSTALLED_APPS:
+        urlpatterns.insert(-1, path(_prefix, include(f"modules.{_module}.urls")))

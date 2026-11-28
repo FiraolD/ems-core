@@ -29,3 +29,9 @@ pack = "et"                        # statutory rules: Ethiopia
 [extension]
 # Python package next to this file that adds client-specific behaviour.
 package = "extension_pkg"
+
+# Values for that package, so its numbers live here and not in code. Text, whole numbers or
+# true/false; write money as quoted text. Read them in extension code with
+# settings.EMS_CLIENT.extension_settings.
+# [extension.settings]
+# example_amount = "0.00"

@@ -1,4 +1,4 @@
-/* Payroll screens. Reuses the variables and buttons from company/app.css. */
+/* Shared page styles for module screens (payroll, leave, overtime, attendance). Uses the variables and buttons from app.css. */
 .pay-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.4rem; }
 .pay-header h1 { margin: .35rem 0 .2rem; font-size: 1.9rem; font-weight: 700; letter-spacing: -.03em; }
 .pay-meta { margin: 0; color: var(--muted); font-size: .82rem; }
@@ -44,3 +44,19 @@
 .notice ul { margin: .4rem 0 0; padding-left: 1.1rem; }
 .check-chip { display: inline-block; padding: .15rem .55rem; border-radius: 99px; background: #fff3f1; color: #8e3029; font-size: .7rem; font-weight: 700; }
 .verified { color: #1d6a49; font-size: .82rem; font-weight: 600; }
+
+/* Request workflow screens */
+.status-badge.pending { background: #fdf0c8; color: #7a5a12; }
+.status-badge.approved { background: #d5f2e4; color: #1d6a49; }
+.status-badge.rejected { background: #fde2df; color: #8e3029; }
+.status-badge.cancelled { background: #eef2f7; color: #64748b; }
+.pay-field select, .pay-field textarea { box-sizing: border-box; min-width: 8rem; padding: .6rem .7rem; border: 1px solid #cfd8e3; border-radius: .55rem; background: #fff; color: var(--ink); font: inherit; }
+.pay-field select:focus, .pay-field textarea:focus { border-color: #74aaa3; outline: 3px solid rgba(37, 109, 104, .15); }
+.pay-field.wide { flex: 1 1 16rem; }
+.pay-field.wide input { width: 100%; }
+.pay-check { display: flex; align-items: center; gap: .45rem; padding-bottom: .65rem; font-size: .84rem; }
+.pay-inline { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: 0; }
+.pay-inline input[type="text"] { padding: .4rem .55rem; border: 1px solid #cfd8e3; border-radius: .5rem; font: inherit; font-size: .8rem; }
+.button-small { padding: .35rem .7rem; font-size: .78rem; }
+.balance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .8rem; }
+.pay-help { margin: .6rem 0 0; color: var(--muted); font-size: .8rem; }

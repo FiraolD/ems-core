@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Overtime approvals | {{ company.legal_name|default:"EMS" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'company/pages.css' %}">{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <a class="pay-back" href="{% url 'overtime:mine' %}">&larr; My overtime</a>
+  <div class="pay-header">
+    <div>
+      <p class="section-eyebrow">APPROVALS</p>
+      <h1>Overtime</h1>
+      <p class="pay-meta">You cannot decide your own overtime. Approved overtime is paid in the month it was worked.</p>
+    </div>
+  </div>
+
+  <section class="pay-panel" aria-labelledby="pending-title">
+    <h2 id="pending-title">Waiting for a decision</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>Employee</th><th>Date</th><th class="num">Hours</th><th>Kind</th><th class="num">Rate</th><th>Reason</th><th></th></tr></thead>
+        <tbody>
+        {% for e in pending %}
+          <tr>
+            <td>{{ e.employee.employee_number }} {{ e.employee.full_name }}</td><td>{{ e.work_date|date:"j M Y" }}</td>
+            <td class="num">{{ e.hours }}</td><td>{{ e.category.get_kind_display }}</td><td class="num">x{{ e.multiplier }}</td><td>{{ e.reason }}</td>
+            <td>
+              {% if e.is_mine %}<span class="pay-meta">Your own entry</span>
+              {% else %}
+              <form class="pay-inline" method="post" action="{% url 'overtime:decide' e.pk %}">{% csrf_token %}
+                <input type="text" name="note" placeholder="Note (optional)" maxlength="255" aria-label="Note">
+                <button class="button-primary button-small" name="action" value="approve" type="submit">Approve</button>
+                <button class="button-secondary button-small" name="action" value="reject" type="submit">Reject</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty" colspan="7">Nothing is waiting.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pay-panel" aria-labelledby="recent-title">
+    <h2 id="recent-title">Recently decided</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>Employee</th><th>Date</th><th class="num">Hours</th><th>Kind</th><th>Status</th><th>By</th><th></th></tr></thead>
+        <tbody>
+        {% for e in recent %}
+          <tr>
+            <td>{{ e.employee.employee_number }} {{ e.employee.full_name }}</td><td>{{ e.work_date|date:"j M Y" }}</td>
+            <td class="num">{{ e.hours }}</td><td>{{ e.category.get_kind_display }}</td>
+            <td><span class="status-badge {{ e.status }}">{{ e.get_status_display }}</span></td>
+            <td>{{ e.decided_by.get_username|default:"" }}</td>
+            <td>{% if e.status == "approved" %}<form class="pay-inline" method="post" action="{% url 'overtime:cancel' e.pk %}">{% csrf_token %}<input type="hidden" name="next" value="approvals"><button class="button-secondary button-small" type="submit">Cancel</button></form>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty" colspan="7">Nothing decided yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

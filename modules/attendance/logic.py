@@ -109,3 +109,24 @@ def parse_import(text: str, known_numbers: set[str], *, today: date | None = Non
     if not result.errors and not result.rows:
         result.errors.append("The file has no attendance rows.")
     return result
+
+
+SUMMARY_HEADERS = ("Employee No.", "Name", "Present", "Late", "Absent", "Half day")  # same order as STATUSES
+
+
+def monthly_summary(people: Iterable[tuple[str, str]], records: Iterable[tuple[str, str]]):
+    """Counts of each recorded status per employee for a month.
+
+    ``people`` are (employee_number, name) for everyone who should appear (so employees with no
+    records show zeros); ``records`` are (employee_number, status). Returns (rows, totals).
+    Only recorded days are counted: days nobody recorded are not shown as present.
+    """
+    counts = {number: dict.fromkeys(STATUSES, 0) for number, _ in people}
+    for number, status in records:
+        if number in counts and status in counts[number]:
+            counts[number][status] += 1
+    rows = [
+        (number, name, *(counts[number][s] for s in STATUSES)) for number, name in sorted(people)
+    ]
+    totals = ("TOTAL", f"{len(rows)} employees", *(sum(r[i] for r in rows) for i in range(2, 2 + len(STATUSES))))
+    return rows, totals

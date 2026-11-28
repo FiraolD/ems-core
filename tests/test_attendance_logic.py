@@ -66,3 +66,18 @@ def test_only_absences_and_half_days_affect_pay():
     d = date(2026, 9, 1)
     out = logic.pay_statuses([(d, "present"), (d, "late"), (d, "absent"), (d, "half_day")])
     assert out == [(d, "absent"), (d, "half_day")]
+
+
+def test_monthly_summary_counts_recorded_statuses_and_lists_everyone():
+    people = [("E2", "Sara"), ("E1", "Abebe"), ("E3", "Kebede")]
+    records = [("E1", "absent"), ("E1", "absent"), ("E1", "late"), ("E2", "present"), ("E2", "half_day"),
+               ("ZZ", "absent")]  # unknown employee ignored
+    rows, totals = logic.monthly_summary(people, records)
+    assert [r[0] for r in rows] == ["E1", "E2", "E3"]
+    assert rows[0] == ("E1", "Abebe", 0, 1, 2, 0)   # present, late, absent, half_day
+    assert rows[2] == ("E3", "Kebede", 0, 0, 0, 0)  # no records: zeros, not "present"
+    assert totals == ("TOTAL", "3 employees", 1, 1, 2, 1)
+
+
+def test_monthly_summary_header_order_matches_statuses():
+    assert [h.lower().replace(" ", "_") for h in logic.SUMMARY_HEADERS[2:]] == list(logic.STATUSES)

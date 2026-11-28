@@ -42,6 +42,15 @@
           {% if name == "payroll" %}
             {% if perms.payroll.view_payrollrun %}<a class="module-link" href="{% url 'payroll:index' %}">Open payroll &rarr;</a>{% endif %}
             {% if user.employee %}<a class="module-link" href="{% url 'payroll:my_payslips' %}">My payslips &rarr;</a>{% endif %}
+          {% elif name == "leave" %}
+            {% if user.employee or perms.leave.add_leaverequest %}<a class="module-link" href="{% url 'leave:mine' %}">My leave &rarr;</a>{% endif %}
+            {% if perms.leave.approve_leaverequest %}<a class="module-link" href="{% url 'leave:approvals' %}">Approve leave &rarr;</a>{% endif %}
+          {% elif name == "overtime" %}
+            {% if user.employee or perms.overtime.add_overtimeentry %}<a class="module-link" href="{% url 'overtime:mine' %}">My overtime &rarr;</a>{% endif %}
+            {% if perms.overtime.approve_overtimeentry %}<a class="module-link" href="{% url 'overtime:approvals' %}">Approve overtime &rarr;</a>{% endif %}
+          {% elif name == "attendance" %}
+            {% if perms.attendance.view_attendancerecord %}<a class="module-link" href="{% url 'attendance:report' %}">Attendance report &rarr;</a>{% endif %}
+            {% if perms.attendance.import_attendancerecord %}<a class="module-link" href="{% url 'attendance:import' %}">Import attendance &rarr;</a>{% endif %}
           {% elif name == "hr" and user.is_staff and perms.hr.view_employee %}
             <a class="module-link" href="{% url 'admin:hr_employee_changelist' %}">Open employees &rarr;</a>
           {% endif %}

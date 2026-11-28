@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Payroll {{ period.label }} | {{ company.legal_name|default:"EMS" }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'payroll/payroll.css' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'company/pages.css' %}">{% endblock %}
 {% block content %}
 <div class="dashboard">
   <a class="pay-back" href="{% url 'payroll:index' %}">&larr; All payroll runs</a>

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Leave approvals | {{ company.legal_name|default:"EMS" }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'company/pages.css' %}">{% endblock %}
+{% block content %}
+<div class="dashboard">
+  <a class="pay-back" href="{% url 'leave:mine' %}">&larr; My leave</a>
+  <div class="pay-header">
+    <div>
+      <p class="section-eyebrow">APPROVALS</p>
+      <h1>Leave requests</h1>
+      <p class="pay-meta">Approving checks the balance and overlaps again. You cannot decide your own request.</p>
+    </div>
+  </div>
+
+  <section class="pay-panel" aria-labelledby="pending-title">
+    <h2 id="pending-title">Waiting for a decision</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th class="num">Days</th><th class="num">Balance</th><th>Reason</th><th></th></tr></thead>
+        <tbody>
+        {% for r in pending %}
+          <tr>
+            <td>{{ r.employee.employee_number }} {{ r.employee.full_name }}</td><td>{{ r.leave_type.name }}</td>
+            <td>{{ r.start_date|date:"j M Y" }}</td><td>{{ r.end_date|date:"j M Y" }}</td>
+            <td class="num">{{ r.days }}</td><td class="num">{% if r.available is not None %}{{ r.available }}{% else %}&ndash;{% endif %}</td>
+            <td>{{ r.reason }}</td>
+            <td>
+              {% if r.is_mine %}<span class="pay-meta">Your own request</span>
+              {% else %}
+              <form class="pay-inline" method="post" action="{% url 'leave:decide' r.pk %}">{% csrf_token %}
+                <input type="text" name="note" placeholder="Note (optional)" maxlength="255" aria-label="Note">
+                <button class="button-primary button-small" name="action" value="approve" type="submit">Approve</button>
+                <button class="button-secondary button-small" name="action" value="reject" type="submit">Reject</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty" colspan="8">Nothing is waiting.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pay-panel" aria-labelledby="recent-title">
+    <h2 id="recent-title">Recently decided</h2>
+    <div class="pay-table-wrap">
+      <table class="pay-table">
+        <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th class="num">Days</th><th>Status</th><th>By</th><th></th></tr></thead>
+        <tbody>
+        {% for r in recent %}
+          <tr>
+            <td>{{ r.employee.employee_number }} {{ r.employee.full_name }}</td><td>{{ r.leave_type.name }}</td>
+            <td>{{ r.start_date|date:"j M Y" }}</td><td>{{ r.end_date|date:"j M Y" }}</td><td class="num">{{ r.days }}</td>
+            <td><span class="status-badge {{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td>{{ r.decided_by.get_username|default:"" }}</td>
+            <td>{% if r.status == "approved" %}<form class="pay-inline" method="post" action="{% url 'leave:cancel' r.pk %}">{% csrf_token %}<input type="hidden" name="next" value="approvals"><button class="button-secondary button-small" type="submit">Cancel</button></form>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td class="empty" colspan="8">Nothing decided yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
