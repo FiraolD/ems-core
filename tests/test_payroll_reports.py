@@ -31,10 +31,12 @@ def test_register_is_sorted_and_totals_add_up():
     assert r.totals[-1] == D("13250.00")  # net 8250 + 5000
 
 
-def test_income_tax_includes_bonus_tax_in_total():
-    r = reports.income_tax([line(bonus_tax=D("100.00"))])
-    assert r.rows[0][-1] == D("1750.00")
-    assert r.totals[-1] == D("1750.00")
+def test_income_tax_report_does_not_count_bonus_tax_twice():
+    # PAYE is charged on income that includes the bonus, so bonus tax is part of it.
+    r = reports.income_tax([line(paye=D("1750.00"), bonus_tax=D("100.00"))])
+    assert r.headers[-2:] == ("Income tax (PAYE)", "Of which on bonus")
+    assert r.rows[0][-2:] == (D("1750.00"), D("100.00"))
+    assert r.totals[-2:] == (D("1750.00"), D("100.00"))  # the tax total is PAYE alone
 
 
 def test_pension_totals_employee_employer_and_both():

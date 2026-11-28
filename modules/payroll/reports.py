@@ -43,7 +43,7 @@ def _ordered(lines: Iterable) -> list:
 def register(lines: Iterable) -> Report:
     rows_in = _ordered(lines)
     headers = ("Employee No.", "Name", "Department", "Basic earned", "Transport", "Other allowances",
-               "Overtime", "Bonus", "Gross", "Absence", "Income tax", "Bonus tax", "Pension (employee)",
+               "Overtime", "Bonus", "Gross", "Absence", "Income tax", "Of which on bonus", "Pension (employee)",
                "Advance", "Total deductions", "Net pay")
     # Absence is shown for information: it is already out of basic earned, not a further deduction.
     order = ("basic_earned", "transport_payable", "other_allowances", "overtime_pay", "bonus",
@@ -59,15 +59,15 @@ def register(lines: Iterable) -> Report:
 
 def income_tax(lines: Iterable) -> Report:
     rows_in = _ordered(lines)
-    headers = ("Employee No.", "Name", "TIN", "Taxable income", "Rate", "Income tax", "Bonus tax", "Total tax")
+    # Income tax (PAYE) is charged on taxable income that already includes any bonus, so the
+    # tax on a bonus is part of it, never added on top. It is shown for information only.
+    headers = ("Employee No.", "Name", "TIN", "Taxable income", "Rate", "Income tax (PAYE)", "Of which on bonus")
     rows = tuple(
-        (ln.employee_number, ln.employee_name, ln.tin, ln.taxable_income, ln.tax_rate,
-         ln.paye, ln.bonus_tax, money(Decimal(ln.paye) + Decimal(ln.bonus_tax)))
+        (ln.employee_number, ln.employee_name, ln.tin, ln.taxable_income, ln.tax_rate, ln.paye, ln.bonus_tax)
         for ln in rows_in
     )
     totals = ("TOTAL", f"{len(rows_in)} employees", "", _sum(rows_in, "taxable_income"), "",
-              _sum(rows_in, "paye"), _sum(rows_in, "bonus_tax"),
-              money(_sum(rows_in, "paye") + _sum(rows_in, "bonus_tax")))
+              _sum(rows_in, "paye"), _sum(rows_in, "bonus_tax"))
     return Report("income-tax", "Income tax", headers, rows, totals)
 
 
