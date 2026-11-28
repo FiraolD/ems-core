@@ -1,0 +1,35 @@
+# SAMPLE CLIENT. A made-up company used to prove that one core serves differently configured
+# installs (tests/test_sample_client.py and tests/test_client_isolation_django.py). It is not a
+# real customer. For a real client, copy clients/_template into their own private repository.
+#
+# What differs from the template: fewer modules, its own pay rules, and an extension package
+# that pays a full-attendance bonus whose amount is set below.
+
+[client]
+slug = "sample-workshop"
+display_name = "Sample Workshop"
+
+[company]
+legal_name = "Sample Workshop Manufacturing PLC"
+tin = ""
+address = "Adama"
+
+[modules]
+# Only attendance and payroll on top of HR: no leave, no overtime.
+enabled = ["hr", "attendance", "payroll"]
+
+[country]
+pack = "et"
+
+[rules]
+# A 26-working-day month for absence and part-month pay, and transport allowance exempt from tax.
+# (Sample values for the test. Check real tax treatment with the client's adviser.)
+absence_divisor = 26
+transport_taxable = false
+
+[extension]
+package = "workshop_extension"
+
+[extension.settings]
+# Paid to everyone employed for the whole month who had no unpaid absence. Quoted text, never a number.
+full_attendance_bonus = "500.00"
